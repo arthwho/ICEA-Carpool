@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { signIn, signUp, setUserProfile, getUserProfile, signInWithGoogle, getRedirectUri } from '../services/firebase';
 
 const AuthScreen = ({ onAuthSuccess }) => {
   const [email, setEmail] = useState('');
@@ -17,28 +18,37 @@ const AuthScreen = ({ onAuthSuccess }) => {
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
-    console.log('Attempting auth with:', { email, password, isLogin }); // Debug log
-    
     if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha email e senha.');
       return;
     }
-    
+
     setLoading(true);
     try {
-      // Mock authentication - replace with real auth later
-      if (password === 'password') {
-        console.log('Password correct, creating user...'); // Debug log
-        const mockUser = { uid: email, email };
-        console.log('User created:', mockUser); // Debug log
-        onAuthSuccess(mockUser);
+      if (isLogin) {
+        const cred = await signIn(email.trim(), password);
+        // Ensure user profile exists
+        const existing = await getUserProfile(cred.user.uid);
+        if (!existing) {
+          await setUserProfile(cred.user.uid, {
+            email: cred.user.email,
+            name: (cred.user.email || '').split('@')[0],
+            isDriver: false,
+          });
+        }
+        onAuthSuccess(cred.user);
       } else {
-        console.log('Password incorrect:', password); // Debug log
-        Alert.alert('Erro', 'Credenciais inválidas');
+        const cred = await signUp(email.trim(), password);
+        await setUserProfile(cred.user.uid, {
+          email: cred.user.email,
+          name: (cred.user.email || '').split('@')[0],
+          isDriver: false,
+        });
+        onAuthSuccess(cred.user);
       }
     } catch (err) {
-      console.error('Auth error:', err); // Debug log
-      Alert.alert('Erro', err.message);
+      console.error('Auth error:', err);
+      Alert.alert('Erro', err.message || 'Falha ao autenticar');
     } finally {
       setLoading(false);
     }
@@ -47,20 +57,39 @@ const AuthScreen = ({ onAuthSuccess }) => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      // Mock Google sign-in - replace with real implementation later
-      const mockUser = { uid: 'usuario.google@gmail.com', email: 'usuario.google@gmail.com' };
-      onAuthSuccess(mockUser);
+      console.log('AuthScreen: Starting Google Sign-In...');
+      const cred = await signInWithGoogle();
+
+      // Ensure user profile exists
+      const existing = await getUserProfile(cred.user.uid);
+      if (!existing) {
+        await setUserProfile(cred.user.uid, {
+          email: cred.user.email,
+          name: cred.user.displayName || (cred.user.email || '').split('@')[0],
+          isDriver: false,
+        });
+      }
+
+      onAuthSuccess(cred.user);
     } catch (err) {
-      Alert.alert('Erro', err.message);
+      console.error('AuthScreen: Google sign-in error:', err);
+      if (err.message !== 'Google sign-in was cancelled') {
+        Alert.alert('Erro', `Falha no login com Google: ${err.message}`);
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const debugRedirectUri = () => {
+    const uri = getRedirectUri();
+    Alert.alert('Redirect URI', `Copy this URI to Google Cloud Console:\n\n${uri}`);
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{isLogin ? 'Login' : 'Criar Conta'}</Text>
-      
+
       <TextInput
         style={styles.input}
         placeholder="Email"
@@ -70,7 +99,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
         keyboardType="email-address"
         autoCapitalize="none"
       />
-      
+
       <TextInput
         style={styles.input}
         placeholder="Senha"
@@ -79,9 +108,9 @@ const AuthScreen = ({ onAuthSuccess }) => {
         onChangeText={setPassword}
         secureTextEntry
       />
-      
-      <TouchableOpacity 
-        style={styles.button} 
+
+      <TouchableOpacity
+        style={styles.button}
         onPress={handleAuth}
         disabled={loading}
       >
@@ -93,23 +122,31 @@ const AuthScreen = ({ onAuthSuccess }) => {
           </Text>
         )}
       </TouchableOpacity>
-      
+{/*
       <View style={styles.dividerContainer}>
         <View style={styles.dividerLine} />
         <Text style={styles.dividerText}>OU</Text>
         <View style={styles.dividerLine} />
       </View>
-      
-      <TouchableOpacity 
-        style={[styles.button, styles.googleButton]} 
+
+      <TouchableOpacity
+        style={[styles.button, styles.googleButton]}
         onPress={handleGoogleSignIn}
         disabled={loading}
       >
         <Text style={styles.googleButtonText}>Entrar com o Google</Text>
       </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.transparentButton} 
+
+       Temporary debug button - remove after setup 
+      <TouchableOpacity
+        style={[styles.button, { backgroundColor: '#666', marginTop: 10 }]}
+        onPress={debugRedirectUri}
+      >
+        <Text style={styles.buttonText}>🔧 Debug: Get Redirect URI</Text>
+      </TouchableOpacity>
+*/}
+      <TouchableOpacity
+        style={styles.transparentButton}
         onPress={() => setIsLogin(!isLogin)}
       >
         <Text style={styles.toggleText}>

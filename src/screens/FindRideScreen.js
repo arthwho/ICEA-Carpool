@@ -8,38 +8,20 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { subscribeAvailableRides, deleteRide as dbDeleteRide, updateRide as dbUpdateRide, adminConfig } from '../services/firebase';
 
 const FindRideScreen = ({ setScreen, user }) => {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const ADMIN_EMAIL = 'arthwho@gmail.com';
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const isAdmin = user?.email === adminConfig.email;
 
   useEffect(() => {
-    // Mock data loading - replace with real implementation later
-    setTimeout(() => {
-      const mockRides = [
-        {
-          id: 'ride_1',
-          driverName: 'Ana',
-          origin: 'Centro',
-          departureTime: '08:00',
-          availableSeats: 3,
-          status: 'available',
-        },
-        {
-          id: 'ride_2',
-          driverName: 'Bruno',
-          origin: 'Bairro de Fátima',
-          departureTime: '07:45',
-          availableSeats: 1,
-          status: 'available',
-        },
-      ];
-      setRides(mockRides);
+    const unsubscribe = subscribeAvailableRides((data) => {
+      setRides(data);
       setLoading(false);
-    }, 1000);
+    });
+    return () => unsubscribe && unsubscribe();
   }, []);
 
   const handleBookRide = (rideId) => {
@@ -55,8 +37,14 @@ const FindRideScreen = ({ setScreen, user }) => {
         {
           text: 'Excluir',
           style: 'destructive',
-          onPress: () => {
-            setRides(rides.filter(ride => ride.id !== rideId));
+          onPress: async () => {
+            try {
+              await dbDeleteRide(rideId);
+              Alert.alert('Sucesso', 'Carona excluída com sucesso!');
+            } catch (error) {
+              console.error('Error deleting ride:', error);
+              Alert.alert('Erro', 'Não foi possível excluir a carona.');
+            }
           },
         },
       ]

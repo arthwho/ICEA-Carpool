@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { addRide, getUserProfile } from '../services/firebase';
 
 const OfferRideScreen = ({ setScreen, user }) => {
   const [origin, setOrigin] = useState('');
@@ -24,10 +25,26 @@ const OfferRideScreen = ({ setScreen, user }) => {
     
     setLoading(true);
     try {
-      // Mock ride creation - replace with real implementation later
+      // Get user profile to get the driver name
+      const userProfile = await getUserProfile(user?.uid);
+      const driverName = userProfile?.name || user?.email || 'Usuário';
+      
+      // Add ride to Firestore
+      await addRide({
+        driverId: user?.uid,
+        driverName,
+        origin: origin.trim(),
+        destination: 'ICEA - UFVJM',
+        departureTime: departureTime.trim(),
+        availableSeats: parseInt(availableSeats, 10),
+        passengers: [],
+        status: 'available',
+      });
+      
       Alert.alert('Sucesso', 'Carona publicada com sucesso!');
       setScreen('Home');
     } catch (err) {
+      console.error('Error offering ride:', err);
       Alert.alert('Erro', 'Não foi possível oferecer a carona. Tente novamente.');
     } finally {
       setLoading(false);

@@ -35,3 +35,23 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Security and sensitive files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+google-services.json
+GoogleService-Info.plist
+firebase-config.js
+firebase-credentials.js
+src/config/secrets.js
+src/config/credentials.js
+src/services/firebase-config.js
+secrets/
+credentials/
+*.key
+*.pem
+*.p12
+*.jks
