@@ -5,18 +5,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  ScrollView,
 } from 'react-native';
-import { signOut as firebaseSignOut, getUserProfile } from '../services/firebase';
+import { signOut as firebaseSignOut, getUserProfile, getDriverCarInfo } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
+import ThemeToggle from '../components/ThemeToggle';
 
 const ProfileScreen = ({ setScreen, user, onSignOut }) => {
   const [userProfile, setUserProfile] = useState(null);
+  const [carInfo, setCarInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const { isMobile } = useResponsive();
   const { showAlert, alertState, closeAlert } = useCustomAlert();
+  const { theme } = useTheme();
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -24,6 +29,12 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
         try {
           const profile = await getUserProfile(user.uid);
           setUserProfile(profile);
+          
+          // Load car information if user is a driver
+          if (profile?.isDriver) {
+            const car = await getDriverCarInfo(user.uid);
+            setCarInfo(car);
+          }
         } catch (error) {
           console.error('Error loading user profile:', error);
         } finally {
@@ -66,8 +77,8 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
   if (loading) {
     return (
       <Container style={styles.container} user={user}>
-        <ActivityIndicator size="large" color="#4299e1" />
-        <Text style={styles.loadingText}>Carregando perfil...</Text>
+        <ActivityIndicator size="large" color={theme.interactive.active} />
+        <Text style={[styles.loadingText, { color: theme.text.primary }]}>Carregando perfil...</Text>
       </Container>
     );
   }
@@ -81,51 +92,97 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
         buttons={alertState.buttons}
         onClose={closeAlert}
       />
-      <View style={styles.profileCard}>
-        
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Nome:</Text>
-          <Text style={styles.value}>
-            {userProfile?.firstName || user?.email?.split('@')[0] || 'N/A'}
-          </Text>
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Sobrenome:</Text>
-          <Text style={styles.value}>
-            {userProfile?.lastName || 'N/A'}
-          </Text>
-        </View>
-
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Nome Completo:</Text>
-          <Text style={styles.value}>
-            {userProfile?.name || `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 'N/A'}
-          </Text>
-        </View>
-        
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Email:</Text>
-          <Text style={styles.value}>{user?.email}</Text>
-        </View>
-        
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>ID do Usuário:</Text>
-          <Text style={styles.value}>{user?.uid}</Text>
-        </View>
-        
-        <View style={styles.infoSection}>
-          <Text style={styles.label}>Status:</Text>
-          <Text style={styles.status}>Ativo</Text>
-        </View>
-      </View>
       
-      <TouchableOpacity 
-        style={styles.signOutButton} 
-        onPress={handleSignOut}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.signOutButtonText}>Sair da Conta</Text>
-      </TouchableOpacity>
+        <View style={[styles.profileCard, { backgroundColor: theme.surface.primary }]}>
+          
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome:</Text>
+            <Text style={[styles.value, { color: theme.text.secondary }]}>
+              {userProfile?.firstName || user?.email?.split('@')[0] || 'N/A'}
+            </Text>
+          </View>
+
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Sobrenome:</Text>
+            <Text style={[styles.value, { color: theme.text.secondary }]}>
+              {userProfile?.lastName || 'N/A'}
+            </Text>
+          </View>
+
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome Completo:</Text>
+            <Text style={[styles.value, { color: theme.text.secondary }]}>
+              {userProfile?.name || `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 'N/A'}
+            </Text>
+          </View>
+          
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Email:</Text>
+            <Text style={[styles.value, { color: theme.text.secondary }]}>{user?.email}</Text>
+          </View>
+          
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>ID do Usuário:</Text>
+            <Text style={[styles.value, { color: theme.text.secondary }]}>{user?.uid}</Text>
+          </View>
+          
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Status:</Text>
+            <Text style={[styles.status, { color: theme.status.available }]}>Ativo</Text>
+          </View>
+
+          <View style={styles.infoSection}>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Tipo de Usuário:</Text>
+            <Text style={[
+              styles.value, 
+              { color: theme.text.secondary },
+              userProfile?.isDriver && { color: theme.interactive.active, fontWeight: 'bold' }
+            ]}>
+              {userProfile?.isDriver ? 'Motorista' : 'Passageiro'}
+            </Text>
+          </View>
+
+          {/* Car Information Card for Drivers */}
+          {userProfile?.isDriver && carInfo && (
+            <View style={[styles.carInfoCard, { 
+              backgroundColor: theme.interactive.active + '1A',
+              borderLeftColor: theme.interactive.active 
+            }]}>
+              <Text style={[styles.carInfoTitle, { color: theme.interactive.active }]}>Informações do Veículo</Text>
+              <View style={styles.carInfoSection}>
+                <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Modelo:</Text>
+                <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.model}</Text>
+              </View>
+              <View style={styles.carInfoSection}>
+                <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Cor:</Text>
+                <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.color}</Text>
+              </View>
+              <View style={styles.carInfoSection}>
+                <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Placa:</Text>
+                <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.licensePlate}</Text>
+              </View>
+            </View>
+          )}
+        </View>
+        
+        {/* Theme Toggle for Mobile */}
+        {isMobile && (
+          <View style={styles.themeToggleContainer}>
+            <ThemeToggle />
+          </View>
+        )}
+        
+        <TouchableOpacity 
+          style={[styles.signOutButton, { backgroundColor: theme.interactive.button.danger }]} 
+          onPress={handleSignOut}
+        >
+          <Text style={[styles.signOutButtonText, { color: theme.text.inverse }]}>Sair da Conta</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </Container>
   );
 };
@@ -133,12 +190,15 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     alignItems: 'center',
-    justifyContent: 'center',
     padding: 20,
+    paddingTop: 40,
+    paddingBottom: 100, // Extra padding to ensure logout button is reachable
   },
   profileCard: {
-    backgroundColor: '#4a5568',
     padding: 20,
     borderRadius: 12,
     width: '100%',
@@ -148,7 +208,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -157,21 +216,52 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    color: '#a0aec0',
     marginBottom: 5,
   },
   value: {
     fontSize: 16,
-    color: '#e2e8f0',
     fontWeight: '500',
   },
   status: {
     fontSize: 16,
-    color: '#48bb78',
     fontWeight: 'bold',
   },
+  driverStatus: {
+    fontWeight: 'bold',
+  },
+  carInfoCard: {
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 15,
+    borderLeftWidth: 4,
+  },
+  carInfoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  carInfoSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  carInfoLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  carInfoValue: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  themeToggleContainer: {
+    marginBottom: 20,
+    width: '100%',
+    maxWidth: 400,
+    alignItems: 'center',
+  },
   signOutButton: {
-    backgroundColor: '#fc8181',
     padding: 15,
     borderRadius: 8,
     width: '100%',
@@ -179,13 +269,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   signOutButtonText: {
-    color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
   },
   loadingText: {
     marginTop: 10,
-    color: '#fff',
     fontSize: 16,
   },
 });

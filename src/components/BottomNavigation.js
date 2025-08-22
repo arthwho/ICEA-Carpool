@@ -1,12 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useResponsive } from '../hooks/useResponsive';
+import { useTheme } from '../hooks/useTheme';
 
 const BottomNavigation = ({ currentScreen, onScreenChange }) => {
   const { isMobile } = useResponsive();
+  const { theme } = useTheme();
 
-  // Don't render on web
-  if (!isMobile) {
+  // Don't render on web or on Auth screen
+  if (!isMobile || currentScreen === 'Auth') {
     return null;
   }
 
@@ -32,13 +34,17 @@ const BottomNavigation = ({ currentScreen, onScreenChange }) => {
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { 
+      backgroundColor: theme.background.primary, 
+      borderTopColor: theme.border.secondary,
+      shadowColor: theme.shadow.primary
+    }]}>
       {navigationItems.map((item) => (
         <TouchableOpacity
           key={item.id}
           style={[
             styles.tab,
-            currentScreen === item.screen && styles.activeTab,
+            currentScreen === item.screen && [styles.activeTab, { backgroundColor: theme.interactive.active + '1A' }],
           ]}
           onPress={() => onScreenChange(item.screen)}
           activeOpacity={0.7}
@@ -51,7 +57,8 @@ const BottomNavigation = ({ currentScreen, onScreenChange }) => {
           </Text>
           <Text style={[
             styles.label,
-            currentScreen === item.screen && styles.activeLabel,
+            { color: theme.text.tertiary },
+            currentScreen === item.screen && { color: theme.interactive.active, fontWeight: 'bold' },
           ]}>
             {item.label}
           </Text>
@@ -64,16 +71,13 @@ const BottomNavigation = ({ currentScreen, onScreenChange }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#1a202c',
     borderTopWidth: 1,
-    borderTopColor: '#2d3748',
     paddingBottom: Platform.OS === 'ios' ? 20 : 10,
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     elevation: 8,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: -2,
@@ -88,7 +92,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   activeTab: {
-    backgroundColor: 'rgba(66, 153, 225, 0.1)',
+    // Background color will be applied dynamically
   },
   icon: {
     fontSize: 20,
@@ -99,12 +103,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 12,
-    color: '#a0aec0',
     fontWeight: '500',
-  },
-  activeLabel: {
-    color: '#4299e1',
-    fontWeight: 'bold',
   },
 });
 

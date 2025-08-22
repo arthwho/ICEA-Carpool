@@ -5,24 +5,27 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
 
-const LoadingScreen = () => (
-  <View style={styles.container}>
-    <ActivityIndicator size="large" color="#4299e1" />
-    <Text style={styles.loadingText}>Carregando...</Text>
-  </View>
-);
+const LoadingScreen = () => {
+  const { theme } = useTheme();
+  
+  return (
+    <View style={[styles.container, { backgroundColor: theme.background.secondary }]}>
+      <ActivityIndicator size="large" color={theme.interactive.active} />
+      <Text style={[styles.loadingText, { color: theme.text.primary }]}>Carregando...</Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#2d3748',
   },
   loadingText: {
     marginTop: 20,
-    color: '#fff',
     fontSize: 18,
   },
 });

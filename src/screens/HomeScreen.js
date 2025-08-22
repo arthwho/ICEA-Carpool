@@ -95,7 +95,6 @@ const styles = StyleSheet.create({
   },
   menuGrid: {
     width: '100%',
-    maxWidth: 800,
   },
   menuItem: {
     marginBottom: 20,

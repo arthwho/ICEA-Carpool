@@ -4,47 +4,102 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  FlatList,
+  ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { subscribeAvailableRides, deleteRide as dbDeleteRide, updateRide as dbUpdateRide, adminConfig } from '../services/firebase';
-import { ResponsiveContainer, ResponsiveGrid, ResponsiveCard, MobileContainer } from '../components/ResponsiveLayout';
+import { subscribeAvailableRides, deleteRide as dbDeleteRide, adminConfig } from '../services/firebase';
+import { ResponsiveContainer, MobileContainer, ResponsiveGrid, ResponsiveCard } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
+import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
 
+/**
+ * Tela para encontrar e visualizar caronas disponíveis
+ * Utiliza listener em tempo real para atualizações automáticas
+ * @param {Function} setScreen - Função para navegar entre telas
+ * @param {Object} user - Dados do usuário logado
+ */
 const FindRideScreen = ({ setScreen, user }) => {
+  // ========================================
+  // ESTADOS DA TELA
+  // ========================================
+  
+  // Lista de caronas disponíveis (atualizada em tempo real)
   const [rides, setRides] = useState([]);
+  
+  // Estado de carregamento inicial
   const [loading, setLoading] = useState(true);
-  const { isWeb, isMobile, getResponsiveValue } = useResponsive();
+  
+  // ========================================
+  // HOOKS PARA RESPONSIVIDADE E TEMA
+  // ========================================
+  
+  const { isMobile } = useResponsive();
   const { showAlert, alertState, closeAlert } = useCustomAlert();
+  const { theme } = useTheme();
 
-  const isAdmin = user?.email === adminConfig.email;
+  // ========================================
+  // VERIFICAÇÃO DE ADMINISTRADOR
+  // ========================================
+  
+  // Verifica se o usuário atual é administrador
+  // Administradores podem excluir caronas
+  const isAdmin = user && user.email === adminConfig.email;
 
+  // ========================================
+  // LISTENER EM TEMPO REAL PARA CARONAS
+  // ========================================
+  
+  /**
+   * Configura um listener em tempo real para caronas disponíveis
+   * Este listener é executado sempre que há mudanças na coleção 'rides'
+   * Não precisa recarregar manualmente - atualiza automaticamente
+   */
   useEffect(() => {
-    const unsubscribe = subscribeAvailableRides((data) => {
-      setRides(data);
-      setLoading(false);
+    // Configura o listener do Firestore
+    // subscribeAvailableRides retorna uma função para cancelar o listener
+    const unsubscribe = subscribeAvailableRides((fetchedRides) => {
+      // Esta função é chamada sempre que os dados mudam no Firestore
+      setRides(fetchedRides); // Atualiza a lista de caronas
+      setLoading(false);      // Finaliza o carregamento
     });
-    return () => unsubscribe && unsubscribe();
+
+    // Função de limpeza - remove o listener quando o componente é desmontado
+    // Isso evita vazamentos de memória e listeners desnecessários
+    return () => unsubscribe();
   }, []);
 
-  const handleBookRide = (rideId) => {
-    showAlert('Sucesso', `Reserva para a carona ${rideId} solicitada! (Funcionalidade a ser implementada)`);
-  };
-
+  // ========================================
+  // FUNÇÃO DE EXCLUSÃO DE CARONAS
+  // ========================================
+  
+  /**
+   * Função para excluir uma carona (apenas para administradores)
+   * Remove a carona do Firestore, que automaticamente atualiza a lista
+   * @param {string} rideId - ID da carona a ser excluída
+   */
   const handleDeleteRide = (rideId) => {
+    // Mostra um alerta de confirmação antes de excluir
     showAlert(
       'Confirmar Exclusão',
       'Tem certeza que deseja excluir esta carona?',
       [
-        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+          onPress: () => console.log('Exclusão cancelada'),
+        },
         {
           text: 'Excluir',
           style: 'destructive',
           onPress: async () => {
             try {
+              // Remove a carona do Firestore
               await dbDeleteRide(rideId);
+              
+              // Como o listener está ativo, a lista será atualizada automaticamente
+              // Não precisamos atualizar o estado manualmente
               showAlert('Sucesso', 'Carona excluída com sucesso!');
             } catch (error) {
               console.error('Error deleting ride:', error);
@@ -56,62 +111,27 @@ const FindRideScreen = ({ setScreen, user }) => {
     );
   };
 
-  const renderRideItem = ({ item }) => (
-    <ResponsiveCard style={styles.rideItem}>
-      <Text style={styles.rideText}>
-        <Text style={styles.bold}>Motorista:</Text> {item.driverName}
-      </Text>
-      <Text style={styles.rideText}>
-        <Text style={styles.bold}>Saída:</Text> {item.origin}
-      </Text>
-      <Text style={styles.rideText}>
-        <Text style={styles.bold}>Horário:</Text> {item.departureTime}
-      </Text>
-      <Text style={styles.rideText}>
-        <Text style={styles.bold}>Vagas:</Text> {item.availableSeats}
-      </Text>
-      
-      {isAdmin ? (
-        <View style={styles.adminControls}>
-          <TouchableOpacity 
-            style={[styles.adminButton, styles.editButton]}
-            onPress={() => showAlert('Editar', 'Funcionalidade de edição a ser implementada')}
-          >
-            <Text style={styles.adminButtonText}>Editar</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.adminButton, styles.deleteButton]}
-            onPress={() => handleDeleteRide(item.id)}
-          >
-            <Text style={styles.adminButtonText}>Excluir</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity 
-          style={styles.bookButton}
-          onPress={() => handleBookRide(item.id)}
-        >
-          <Text style={styles.bookButtonText}>Pedir Carona</Text>
-        </TouchableOpacity>
-      )}
-    </ResponsiveCard>
-  );
+  // ========================================
+  // RENDERIZAÇÃO
+  // ========================================
+  
+  // Escolhe o container baseado na plataforma (mobile ou web)
+  const Container = isMobile ? MobileContainer : ResponsiveContainer;
 
+  // Tela de carregamento enquanto os dados estão sendo buscados
   if (loading) {
     const LoadingContainer = isMobile ? MobileContainer : ResponsiveContainer;
     return (
       <LoadingContainer style={styles.loadingContainer} user={user}>
-        <ActivityIndicator size="large" color="#4299e1" />
-        <Text style={styles.loadingText}>Buscando caronas...</Text>
+        <ActivityIndicator size="large" color={theme.interactive.active} />
+        <Text style={[styles.loadingText, { color: theme.text.primary }]}>Buscando caronas...</Text>
       </LoadingContainer>
     );
   }
 
-  // Use MobileContainer for mobile, ResponsiveContainer for web
-  const Container = isMobile ? MobileContainer : ResponsiveContainer;
-
   return (
     <Container style={styles.container} user={user}>
+      {/* Alerta customizado para web */}
       <CustomAlert
         visible={alertState.visible}
         title={alertState.title}
@@ -120,30 +140,63 @@ const FindRideScreen = ({ setScreen, user }) => {
         onClose={closeAlert}
       />
       
-      {rides.length > 0 ? (
-        isWeb ? (
-          <ResponsiveGrid 
-            columns={getResponsiveValue(1, 2, 3)} 
-            style={styles.ridesGrid}
-          >
-            {rides.map((ride, index) => (
-              <View key={ride.id} style={styles.rideWrapper}>
-                {renderRideItem({ item: ride })}
-              </View>
+      {/* Lista de caronas */}
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {rides.length > 0 ? (
+          // Grid responsivo para exibir as caronas
+          <ResponsiveGrid>
+            {rides.map((item) => (
+              <ResponsiveCard key={item.id} style={[styles.rideCard, { backgroundColor: theme.surface.elevated }]}>
+                {/* Informações da carona */}
+                <Text style={[styles.rideTitle, { color: theme.text.primary }]}>{item.origin} para {item.destination}</Text>
+                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
+                  <Text style={[styles.bold, { color: theme.text.primary }]}>Motorista:</Text> {item.driverName}
+                </Text>
+                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
+                  <Text style={[styles.bold, { color: theme.text.primary }]}>Horário:</Text> {item.departureTime}
+                </Text>
+                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
+                  <Text style={[styles.bold, { color: theme.text.primary }]}>Vagas:</Text> {item.availableSeats}
+                </Text>
+                
+                {/* Display car information if available */}
+                {item.carInfo && (
+                  <View style={[styles.carInfoSection, { 
+                    backgroundColor: theme.interactive.active + '1A',
+                    borderLeftColor: theme.interactive.active 
+                  }]}>
+                    <Text style={[styles.carInfoTitle, { color: theme.interactive.active }]}>Veículo:</Text>
+                    <Text style={[styles.carInfoText, { color: theme.text.secondary }]}>
+                      {item.carInfo.model} - {item.carInfo.color}
+                    </Text>
+                    <Text style={[styles.carInfoText, { color: theme.text.secondary }]}>
+                      Placa: {item.carInfo.licensePlate}
+                    </Text>
+                  </View>
+                )}
+                
+                {isAdmin ? (
+                  <TouchableOpacity
+                    style={[styles.deleteButton, { backgroundColor: theme.interactive.button.danger }]}
+                    onPress={() => handleDeleteRide(item.id)}
+                  >
+                    <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Excluir Carona</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity style={[styles.bookButton, { backgroundColor: theme.status.available }]}>
+                    <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Reservar Vaga</Text>
+                  </TouchableOpacity>
+                )}
+              </ResponsiveCard>
             ))}
           </ResponsiveGrid>
         ) : (
-          <FlatList
-            data={rides}
-            renderItem={renderRideItem}
-            keyExtractor={(item) => item.id}
-            style={styles.ridesList}
-            showsVerticalScrollIndicator={false}
-          />
-        )
-      ) : (
-        <Text style={styles.emptyText}>Nenhuma carona disponível no momento.</Text>
-      )}
+          <Text style={[styles.noRidesText, { color: theme.text.tertiary }]}>Nenhuma carona disponível no momento.</Text>
+        )}
+      </ScrollView>
     </Container>
   );
 };
@@ -151,84 +204,79 @@ const FindRideScreen = ({ setScreen, user }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+  },
   title: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#fff',
     marginBottom: 20,
     textAlign: 'center',
   },
-  ridesList: {
-    width: '100%',
-    flex: 1,
-  },
-  ridesGrid: {
-    width: '100%',
-    flex: 1,
-  },
-  rideWrapper: {
+  rideCard: {
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 15,
     width: '100%',
   },
-  rideItem: {
-    width: '100%',
+  rideTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
   },
-  rideText: {
-    color: '#e2e8f0',
+  rideDetail: {
     fontSize: 16,
     marginBottom: 5,
   },
   bold: {
     fontWeight: 'bold',
   },
-  bookButton: {
-    backgroundColor: '#38b2ac',
+  carInfoSection: {
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 6,
     marginTop: 10,
-    alignItems: 'center',
+    marginBottom: 10,
+    borderLeftWidth: 3,
   },
-  bookButtonText: {
-    color: '#fff',
+  carInfoTitle: {
+    fontSize: 14,
     fontWeight: 'bold',
+    marginBottom: 5,
   },
-  emptyText: {
-    color: '#a0aec0',
-    textAlign: 'center',
-    marginTop: 20,
-    fontSize: 16,
+  carInfoText: {
+    fontSize: 14,
+    marginBottom: 2,
   },
-  loadingText: {
-    marginTop: 10,
-    color: '#fff',
-    fontSize: 16,
-  },
-  adminControls: {
-    flexDirection: 'row',
-    marginTop: 10,
-  },
-  adminButton: {
-    flex: 1,
-    padding: 10,
-    borderRadius: 5,
+  bookButton: {
+    padding: 12,
+    borderRadius: 8,
     alignItems: 'center',
-    marginHorizontal: 2,
-  },
-  editButton: {
-    backgroundColor: '#ed8936',
+    marginTop: 15,
   },
   deleteButton: {
-    backgroundColor: '#fc8181',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
   },
-  adminButtonText: {
-    color: '#fff',
+  buttonText: {
+    fontSize: 16,
     fontWeight: 'bold',
+  },
+  noRidesText: {
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 50,
   },
 });
 

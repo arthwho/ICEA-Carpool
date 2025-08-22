@@ -1,9 +1,11 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { useResponsive } from '../hooks/useResponsive';
+import { useTheme } from '../hooks/useTheme';
 
 const SidebarNavigation = ({ currentScreen, onScreenChange, user }) => {
   const { isWeb } = useResponsive();
+  const { theme } = useTheme();
 
   // Don't render on mobile or when user is not logged in
   if (!isWeb || !user || currentScreen === 'Auth') {
@@ -32,9 +34,13 @@ const SidebarNavigation = ({ currentScreen, onScreenChange, user }) => {
   ];
 
   return (
-    <View style={styles.sidebar}>
-      <View style={styles.header}>
-        <Text style={styles.logo}>ICEA Caronas</Text>
+    <View style={[styles.sidebar, { backgroundColor: theme.background.primary, borderRightColor: theme.border.secondary }]}>
+      <View style={[styles.header, { borderBottomColor: theme.border.secondary }]}>
+        <Image 
+          source={require('../../assets/horizontal-icon.png')} 
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </View>
       
       <View style={styles.navigation}>
@@ -43,7 +49,7 @@ const SidebarNavigation = ({ currentScreen, onScreenChange, user }) => {
             key={item.id}
             style={[
               styles.navItem,
-              currentScreen === item.screen && styles.activeNavItem,
+              currentScreen === item.screen && [styles.activeNavItem, { backgroundColor: theme.interactive.active + '1A', borderLeftColor: theme.interactive.active }],
             ]}
             onPress={() => onScreenChange(item.screen)}
             activeOpacity={0.7}
@@ -51,7 +57,8 @@ const SidebarNavigation = ({ currentScreen, onScreenChange, user }) => {
             <Text style={styles.navIcon}>{item.icon}</Text>
             <Text style={[
               styles.navLabel,
-              currentScreen === item.screen && styles.activeNavLabel,
+              { color: theme.text.tertiary },
+              currentScreen === item.screen && { color: theme.interactive.active, fontWeight: 'bold' },
             ]}>
               {item.label}
             </Text>
@@ -69,9 +76,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 250,
-    backgroundColor: '#1a202c',
     borderRightWidth: 1,
-    borderRightColor: '#2d3748',
     zIndex: 1000,
     display: 'flex',
     flexDirection: 'column',
@@ -81,13 +86,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#2d3748',
   },
-  logo: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#4299e1',
-    textAlign: 'center',
+  logoImage: {
+    width: 180,
+    height: 40,
   },
   navigation: {
     flex: 1,
@@ -104,9 +106,7 @@ const styles = StyleSheet.create({
     transition: 'all 0.2s ease',
   },
   activeNavItem: {
-    backgroundColor: 'rgba(66, 153, 225, 0.1)',
     borderLeftWidth: 3,
-    borderLeftColor: '#4299e1',
   },
   navIcon: {
     fontSize: 18,
@@ -116,12 +116,7 @@ const styles = StyleSheet.create({
   },
   navLabel: {
     fontSize: 16,
-    color: '#a0aec0',
     fontWeight: '500',
-  },
-  activeNavLabel: {
-    color: '#4299e1',
-    fontWeight: 'bold',
   },
 });
 

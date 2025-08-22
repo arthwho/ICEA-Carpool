@@ -1,7 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
+import ThemeToggle from './ThemeToggle';
 
 const Header = ({ currentScreen, user }) => {
+  const { theme } = useTheme();
+  
   // Don't show header on Auth screen
   if (currentScreen === 'Auth') {
     return null;
@@ -28,13 +32,19 @@ const Header = ({ currentScreen, user }) => {
   return (
     <View style={[
       styles.header,
-      isWeb ? styles.webHeader : styles.mobileHeader
+      isWeb ? styles.webHeader : styles.mobileHeader,
+      {
+        backgroundColor: theme.background.primary,
+        borderBottomColor: theme.border.secondary,
+        shadowColor: theme.shadow.primary,
+      }
     ]}>
       <View style={[
         styles.headerContent,
         isWeb ? styles.webHeaderContent : styles.mobileHeaderContent
       ]}>
-        <Text style={styles.title}>{getScreenTitle()}</Text>
+        <Text style={[styles.title, { color: theme.text.primary }]}>{getScreenTitle()}</Text>
+        {isWeb && <ThemeToggle />}
       </View>
     </View>
   );
@@ -42,11 +52,8 @@ const Header = ({ currentScreen, user }) => {
 
 const styles = StyleSheet.create({
   header: {
-    backgroundColor: '#1a202c',
     borderBottomWidth: 1,
-    borderBottomColor: '#2d3748',
     elevation: 4,
-    shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
@@ -73,7 +80,8 @@ const styles = StyleSheet.create({
   },
   webHeaderContent: {
     flex: 1,
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 24, // Add horizontal padding for web content
   },
   mobileHeaderContent: {
@@ -82,7 +90,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#ffffff',
     textAlign: 'left',
   },
 });

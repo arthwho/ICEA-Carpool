@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform, Dimensions } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -20,12 +21,14 @@ const ResponsiveLayout = ({ children, mobileLayout, webLayout, style }) => {
 // Responsive Container Component
 export const ResponsiveContainer = ({ children, style, user }) => {
   const isWeb = Platform.OS === 'web';
+  const { theme } = useTheme();
   
   return (
     <View style={[
       styles.container,
       isWeb ? styles.webContainer : styles.mobileContainer,
       isWeb && user && styles.webContainerWithSidebar,
+      { backgroundColor: theme.background.secondary },
       style
     ]}>
       {children}
@@ -36,24 +39,28 @@ export const ResponsiveContainer = ({ children, style, user }) => {
 // Responsive Grid Component
 export const ResponsiveGrid = ({ children, columns = 1, style }) => {
   const isWeb = Platform.OS === 'web';
+  const { theme } = useTheme();
   const webColumns = Math.max(2, columns); // Web gets at least 2 columns
   
   return (
     <View style={[
       styles.grid,
-      {
-        flexDirection: isWeb ? 'row' : 'column',
-        flexWrap: isWeb ? 'wrap' : 'nowrap',
+      isWeb && {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+        gap: '20px',
+        width: '100%',
+        padding: '0 10px', // Add some padding to prevent cards from touching edges
+      },
+      !isWeb && {
+        flexDirection: 'column',
       },
       style
     ]}>
       {React.Children.map(children, (child, index) => (
         <View style={[
           styles.gridItem,
-          isWeb && {
-            width: `${100 / webColumns}%`,
-            paddingHorizontal: 10,
-          }
+          !isWeb && styles.mobileGridItem,
         ]}>
           {child}
         </View>
@@ -65,13 +72,22 @@ export const ResponsiveGrid = ({ children, columns = 1, style }) => {
 // Responsive Card Component
 export const ResponsiveCard = ({ children, style }) => {
   const isWeb = Platform.OS === 'web';
+  const { theme } = useTheme();
   
   return (
-    <View style={[
-      styles.card,
-      isWeb ? styles.webCard : styles.mobileCard,
-      style
-    ]}>
+    <View 
+      style={[
+        styles.card,
+        isWeb ? styles.webCard : styles.mobileCard,
+        { 
+          backgroundColor: theme.surface.primary,
+          ...(isWeb && {
+            boxShadow: `0 4px 6px ${theme.shadow.primary}1A`,
+          })
+        },
+        style
+      ]}
+    >
       {children}
     </View>
   );
@@ -80,13 +96,14 @@ export const ResponsiveCard = ({ children, style }) => {
 // Mobile-specific container with bottom navigation spacing
 export const MobileContainer = ({ children, style }) => {
   const isWeb = Platform.OS === 'web';
+  const { theme } = useTheme();
   
   if (isWeb) {
     return <ResponsiveContainer style={style}>{children}</ResponsiveContainer>;
   }
   
   return (
-    <View style={[styles.container, styles.mobileContainer, style]}>
+    <View style={[styles.container, styles.mobileContainer, { backgroundColor: theme.background.secondary }, style]}>
       {children}
     </View>
   );
@@ -98,20 +115,18 @@ const styles = StyleSheet.create({
   },
   mobileContainer: {
     padding: 20,
-    backgroundColor: '#2d3748',
     paddingBottom: 100, // Extra padding for bottom navigation
   },
   webContainer: {
-    padding: 40,
-    backgroundColor: '#2d3748',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
+    padding: 20, // Equal padding on all sides
+    width: '100vw',
     minHeight: '100vh',
     marginTop: 76, // Account for fixed header height (24px padding * 2 + 28px font height)
   },
   webContainerWithSidebar: {
     marginLeft: 250, // Account for sidebar width
+    padding: 20, // Equal padding on all sides when sidebar is present
+    width: 'calc(100vw - 250px)', // Subtract sidebar width from viewport width
   },
   grid: {
     flex: 1,
@@ -119,8 +134,10 @@ const styles = StyleSheet.create({
   gridItem: {
     marginBottom: 15,
   },
+  mobileGridItem: {
+    width: '100%',
+  },
   card: {
-    backgroundColor: '#4a5568',
     borderRadius: 8,
     padding: 15,
     marginBottom: 10,
@@ -130,9 +147,8 @@ const styles = StyleSheet.create({
   },
   webCard: {
     width: '100%',
-    maxWidth: 400,
-    marginHorizontal: 'auto',
-    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    height: '100%',
+    transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
   },
 });
 

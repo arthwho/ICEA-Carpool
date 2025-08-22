@@ -8,7 +8,7 @@
 
 O trabalho final tem como objetivo o desenvolvimento de um aplicativo móvel multiplataforma para facilitar o compartilhamento de caronas entre estudantes do ICEA (Instituto de Ciências Exatas e Aplicadas) da UFOP. O aplicativo "ICEA Caronas" permite que usuários ofereçam e solicitem caronas de forma segura e eficiente, promovendo a mobilidade sustentável e a integração da comunidade acadêmica.
 
-O projeto foi desenvolvido utilizando React Native com Expo, oferecendo compatibilidade tanto para dispositivos móveis quanto para navegadores web. A aplicação integra autenticação Firebase, banco de dados Firestore em tempo real, e sistema de login com Google (Ainda a ser implementado).
+O projeto foi desenvolvido utilizando React Native com Expo, oferecendo compatibilidade tanto para dispositivos móveis quanto para navegadores web. A aplicação integra autenticação Firebase, banco de dados Firestore em tempo real e um sistema completo de temas responsivos.
 
 <!-- Apresentar o tema. -->
 ### 1. Tema
@@ -22,21 +22,21 @@ Este projeto terá as seguintes funcionalidades:
 
 **Autenticação e Perfil de Usuário:**
 - Sistema de registro e login com email/senha
-- Integração com Google Sign-In*
 - Perfil de usuário com nome, sobrenome e informações pessoais
 - Persistência de sessão entre sessões
+- Sistema de motoristas com informações do veículo
 
 **Gestão de Caronas:**
 - Interface para oferecer caronas com ponto de partida, horário e vagas disponíveis
 - Visualização em tempo real de caronas disponíveis
 - Sistema de solicitação de caronas (funcionalidade em desenvolvimento)
 - Painel administrativo para gerenciamento de caronas
+- Modal para cadastro de informações do veículo
 
-**Interface Responsiva:**
-- Navegação por abas inferiores em dispositivos móveis
-- Sidebar lateral para navegação web
+**Interface Responsiva e Temática:**
 - Layout adaptativo que se ajusta a diferentes tamanhos de tela
-- Sistema de alertas cross-platform (mobile e web)
+- **Sistema de temas claro/escuro** com persistência de preferência
+- **Detecção automática do tema do sistema** (web)
 
 **Recursos Técnicos:**
 - Integração completa com Firebase (Authentication e Firestore)
@@ -68,9 +68,17 @@ Protótipos para as páginas foram elaborados e implementados, e podem ser encon
 **Páginas Implementadas:**
 - **Tela de Autenticação**: Login e registro com validação de campos
 - **Tela Principal (Caronas)**: Listagem de caronas disponíveis em tempo real
-- **Tela de Oferecer Carona**: Formulário para publicação de novas caronas
-- **Tela de Perfil**: Exibição e gerenciamento de informações do usuário
+- **Tela de Oferecer Carona**: Formulário para publicação de novas caronas com modal de informações do veículo
+- **Tela de Perfil**: Exibição e gerenciamento de informações do usuário com toggle de tema
 - **Navegação Responsiva**: Bottom navigation para mobile e sidebar para web
+
+**Novas Funcionalidades Implementadas:**
+- **Sistema de Temas**: Tema claro/escuro com persistência e detecção automática do sistema
+- **Modal de Informações do Veículo**: Cadastro obrigatório de dados do carro para motoristas
+- **Sistema de Alertas Customizados**: Alertas específicos para web com design responsivo
+- **Componentes Responsivos**: Sistema completo de layout adaptativo
+- **Hooks Personalizados**: useTheme, useResponsive, useCustomAlert
+- **Centralização de Cores**: Sistema de cores padronizado e fácil de manter
 
 **Considerações do Protótipo:**
 - Interface adaptativa para diferentes dispositivos
@@ -78,6 +86,8 @@ Protótipos para as páginas foram elaborados e implementados, e podem ser encon
 - Banco de dados em tempo real para atualizações instantâneas
 - Design moderno e intuitivo seguindo padrões de UX/UI
 - Compatibilidade cross-platform (mobile e web)
+- **Sistema de temas completo** com suporte a preferências do usuário
+- **Componentes reutilizáveis** para desenvolvimento eficiente
 
 ## 🚀 Como Executar o Projeto
 
@@ -130,6 +140,36 @@ ADMIN_EMAIL=admin@example.com
 5. **Execute o Projeto**
 ```bash
 npx expo start
+```
+
+## 📚 Documentação Adicional
+
+### Sistema de Layout Responsivo
+Para informações detalhadas sobre como usar o sistema de layout responsivo, consulte o arquivo `RESPONSIVE_LAYOUT.md` que inclui:
+- Tutorial completo em português
+- Exemplos práticos de uso
+- Melhores práticas
+- Componentes disponíveis
+
+### Estrutura do Projeto
+```
+src/
+├── components/          # Componentes reutilizáveis
+│   ├── ResponsiveLayout.js    # Sistema de layout responsivo
+│   ├── ThemeToggle.js         # Toggle de tema
+│   ├── CustomAlert.js         # Alertas customizados
+│   ├── CarInfoModal.js        # Modal de informações do veículo
+│   └── ...
+├── hooks/              # Hooks personalizados
+│   ├── useTheme.js           # Hook para gerenciamento de temas
+│   ├── useResponsive.js      # Hook para responsividade
+│   └── useCustomAlert.js     # Hook para alertas
+├── config/             # Configurações
+│   ├── theme.js              # Configuração de temas
+│   └── firebase-config.js    # Configuração do Firebase
+├── utils/              # Utilitários
+│   └── themeUtils.js         # Utilitários para temas
+└── screens/            # Telas da aplicação
 ```
 
 ### 5. Referências
