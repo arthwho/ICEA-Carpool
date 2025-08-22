@@ -5,46 +5,82 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { ResponsiveContainer, ResponsiveGrid, ResponsiveCard, MobileContainer } from '../components/ResponsiveLayout';
+import { useResponsive } from '../hooks/useResponsive';
 
 const HomeScreen = ({ setScreen }) => {
+  const { isWeb, isMobile, getResponsiveValue } = useResponsive();
+
+  const menuItems = [
+    {
+      title: 'Oferecer Carona',
+      description: 'Publique uma carona para outros usuários',
+      onPress: () => setScreen('OfferRide'),
+      color: '#4299e1',
+    },
+    {
+      title: 'Procurar Carona',
+      description: 'Encontre caronas disponíveis',
+      onPress: () => setScreen('FindRide'),
+      color: '#38b2ac',
+    },
+    {
+      title: 'Meu Perfil',
+      description: 'Gerencie suas informações',
+      onPress: () => setScreen('Profile'),
+      color: '#ed8936',
+    },
+  ];
+
+  const renderMenuItem = (item, index) => (
+    <ResponsiveCard key={index} style={styles.menuItem}>
+      <TouchableOpacity
+        style={[styles.menuButton, { backgroundColor: item.color }]}
+        onPress={item.onPress}
+      >
+        <Text style={styles.menuTitle}>{item.title}</Text>
+        <Text style={styles.menuDescription}>{item.description}</Text>
+      </TouchableOpacity>
+    </ResponsiveCard>
+  );
+
+  // Use MobileContainer for mobile, ResponsiveContainer for web
+  const Container = isMobile ? MobileContainer : ResponsiveContainer;
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Bem-vindo!</Text>
-      <Text style={styles.subtitle}>O que você deseja fazer?</Text>
+    <Container style={styles.container}>
+      <Text style={styles.title}>ICEA Caronas</Text>
+      <Text style={styles.subtitle}>
+        {isWeb ? 'Compartilhe caronas e ajude o meio ambiente' : 'Compartilhe caronas'}
+      </Text>
       
-      <TouchableOpacity 
-        style={[styles.button, styles.primaryButton]} 
-        onPress={() => setScreen('FindRide')}
+      <ResponsiveGrid 
+        columns={getResponsiveValue(1, 2, 3)} 
+        style={styles.menuGrid}
       >
-        <Text style={styles.buttonText}>Procurar Carona</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.button, styles.secondaryButton]} 
-        onPress={() => setScreen('OfferRide')}
-      >
-        <Text style={styles.buttonText}>Oferecer Carona</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={[styles.button, styles.tertiaryButton]} 
-        onPress={() => setScreen('Profile')}
-      >
-        <Text style={styles.buttonText}>Meu Perfil</Text>
-      </TouchableOpacity>
-    </View>
+        {menuItems.map(renderMenuItem)}
+      </ResponsiveGrid>
+
+      {/* Show welcome message on mobile since we have bottom navigation */}
+      {isMobile && (
+        <View style={styles.mobileWelcome}>
+          <Text style={styles.welcomeText}>
+            Use a navegação abaixo para acessar as funcionalidades
+          </Text>
+        </View>
+      )}
+    </Container>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
     marginBottom: 10,
@@ -53,30 +89,49 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     color: '#a0aec0',
-    marginBottom: 30,
+    marginBottom: 40,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+  },
+  menuGrid: {
+    width: '100%',
+    maxWidth: 800,
+  },
+  menuItem: {
+    marginBottom: 20,
+  },
+  menuButton: {
+    padding: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    minHeight: 120,
+    justifyContent: 'center',
+  },
+  menuTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
     textAlign: 'center',
   },
-  button: {
-    width: '100%',
+  menuDescription: {
+    fontSize: 14,
+    color: '#e2e8f0',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  mobileWelcome: {
+    marginTop: 20,
     padding: 15,
+    backgroundColor: 'rgba(66, 153, 225, 0.1)',
     borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 15,
   },
-  primaryButton: {
-    backgroundColor: '#38b2ac',
-  },
-  secondaryButton: {
-    backgroundColor: '#ed8936',
-  },
-  tertiaryButton: {
-    backgroundColor: '#718096',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+  welcomeText: {
+    color: '#a0aec0',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

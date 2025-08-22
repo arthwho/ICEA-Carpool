@@ -5,21 +5,26 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import { addRide, getUserProfile } from '../services/firebase';
+import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
+import { useResponsive } from '../hooks/useResponsive';
+import { useCustomAlert } from '../hooks/useCustomAlert';
+import CustomAlert from '../components/CustomAlert';
 
 const OfferRideScreen = ({ setScreen, user }) => {
   const [origin, setOrigin] = useState('');
   const [departureTime, setDepartureTime] = useState('');
   const [availableSeats, setAvailableSeats] = useState('');
   const [loading, setLoading] = useState(false);
+  const { isMobile } = useResponsive();
+  const { showAlert, alertState, closeAlert } = useCustomAlert();
 
   const handleOfferRide = async () => {
     if (!origin || !departureTime || !availableSeats) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+      showAlert('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
     
@@ -27,7 +32,10 @@ const OfferRideScreen = ({ setScreen, user }) => {
     try {
       // Get user profile to get the driver name
       const userProfile = await getUserProfile(user?.uid);
-      const driverName = userProfile?.name || user?.email || 'Usuário';
+      const driverName = userProfile?.name || 
+                        `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 
+                        user?.email || 
+                        'Usuário';
       
       // Add ride to Firestore
       await addRide({
@@ -41,73 +49,80 @@ const OfferRideScreen = ({ setScreen, user }) => {
         status: 'available',
       });
       
-      Alert.alert('Sucesso', 'Carona publicada com sucesso!');
+      showAlert('Sucesso', 'Carona publicada com sucesso!');
       setScreen('Home');
     } catch (err) {
       console.error('Error offering ride:', err);
-      Alert.alert('Erro', 'Não foi possível oferecer a carona. Tente novamente.');
+      showAlert('Erro', 'Não foi possível oferecer a carona. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Use MobileContainer for mobile, ResponsiveContainer for web
+  const Container = isMobile ? MobileContainer : ResponsiveContainer;
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Oferecer Carona</Text>
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Ponto de Partida (Ex: Centro)"
-        placeholderTextColor="#a0aec0"
-        value={origin}
-        onChangeText={setOrigin}
+    <Container style={styles.container} user={user}>
+      <CustomAlert
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        buttons={alertState.buttons}
+        onClose={closeAlert}
       />
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Horário de Saída (Ex: 07:30)"
-        placeholderTextColor="#a0aec0"
-        value={departureTime}
-        onChangeText={setDepartureTime}
-      />
-      
-      <TextInput
-        style={styles.input}
-        placeholder="Vagas Disponíveis"
-        placeholderTextColor="#a0aec0"
-        value={availableSeats}
-        onChangeText={setAvailableSeats}
-        keyboardType="numeric"
-      />
-      
-      <TouchableOpacity 
-        style={styles.button} 
-        onPress={handleOfferRide}
-        disabled={loading}
-      >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Publicar Carona</Text>
-        )}
-      </TouchableOpacity>
-      
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={() => setScreen('Home')}
-      >
-        <Text style={styles.backButtonText}>Voltar</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        
+        <TextInput
+          style={styles.input}
+          placeholder="Ponto de Partida (Ex: Centro)"
+          placeholderTextColor="#a0aec0"
+          value={origin}
+          onChangeText={setOrigin}
+        />
+        
+        <TextInput
+          style={styles.input}
+          placeholder="Horário de Saída (Ex: 07:30)"
+          placeholderTextColor="#a0aec0"
+          value={departureTime}
+          onChangeText={setDepartureTime}
+        />
+        
+        <TextInput
+          style={styles.input}
+          placeholder="Vagas Disponíveis"
+          placeholderTextColor="#a0aec0"
+          value={availableSeats}
+          onChangeText={setAvailableSeats}
+          keyboardType="numeric"
+        />
+        
+        <TouchableOpacity 
+          style={styles.button} 
+          onPress={handleOfferRide}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Publicar Carona</Text>
+          )}
+        </TouchableOpacity>
+      </ScrollView>
+    </Container>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  scrollContent: {
     flexGrow: 1,
     padding: 20,
     alignItems: 'center',
-    paddingBottom: 60,
+    justifyContent: 'center',
   },
   title: {
     fontSize: 28,
@@ -139,15 +154,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  backButton: {
-    position: 'absolute',
-    bottom: 20,
-    padding: 15,
-  },
-  backButtonText: {
-    color: '#63b3ed',
-    fontSize: 16,
   },
 });
 

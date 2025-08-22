@@ -14,12 +14,19 @@ import { signIn, signUp, setUserProfile, getUserProfile, signInWithGoogle, getRe
 const AuthScreen = ({ onAuthSuccess }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
     if (!email || !password) {
       Alert.alert('Erro', 'Por favor, preencha email e senha.');
+      return;
+    }
+
+    if (!isLogin && (!firstName.trim() || !lastName.trim())) {
+      Alert.alert('Erro', 'Por favor, preencha nome e sobrenome.');
       return;
     }
 
@@ -32,6 +39,8 @@ const AuthScreen = ({ onAuthSuccess }) => {
         if (!existing) {
           await setUserProfile(cred.user.uid, {
             email: cred.user.email,
+            firstName: (cred.user.email || '').split('@')[0],
+            lastName: '',
             name: (cred.user.email || '').split('@')[0],
             isDriver: false,
           });
@@ -39,9 +48,12 @@ const AuthScreen = ({ onAuthSuccess }) => {
         onAuthSuccess(cred.user);
       } else {
         const cred = await signUp(email.trim(), password);
+        const fullName = `${firstName.trim()} ${lastName.trim()}`.trim();
         await setUserProfile(cred.user.uid, {
           email: cred.user.email,
-          name: (cred.user.email || '').split('@')[0],
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          name: fullName,
           isDriver: false,
         });
         onAuthSuccess(cred.user);
@@ -63,9 +75,16 @@ const AuthScreen = ({ onAuthSuccess }) => {
       // Ensure user profile exists
       const existing = await getUserProfile(cred.user.uid);
       if (!existing) {
+        const displayName = cred.user.displayName || '';
+        const nameParts = displayName.split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+        
         await setUserProfile(cred.user.uid, {
           email: cred.user.email,
-          name: cred.user.displayName || (cred.user.email || '').split('@')[0],
+          firstName: firstName,
+          lastName: lastName,
+          name: displayName || (cred.user.email || '').split('@')[0],
           isDriver: false,
         });
       }
@@ -89,6 +108,28 @@ const AuthScreen = ({ onAuthSuccess }) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>{isLogin ? 'Login' : 'Criar Conta'}</Text>
+
+      {!isLogin && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Nome"
+            placeholderTextColor="#a0aec0"
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+
+          <TextInput
+            style={styles.input}
+            placeholder="Sobrenome"
+            placeholderTextColor="#a0aec0"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+          />
+        </>
+      )}
 
       <TextInput
         style={styles.input}
@@ -147,7 +188,14 @@ const AuthScreen = ({ onAuthSuccess }) => {
 */}
       <TouchableOpacity
         style={styles.transparentButton}
-        onPress={() => setIsLogin(!isLogin)}
+        onPress={() => {
+          setIsLogin(!isLogin);
+          // Clear name fields when switching modes
+          if (isLogin) {
+            setFirstName('');
+            setLastName('');
+          }
+        }}
       >
         <Text style={styles.toggleText}>
           {isLogin ? 'Não tem uma conta? Cadastre-se' : 'Já tem uma conta? Faça login'}
@@ -203,15 +251,15 @@ const styles = StyleSheet.create({
   googleButtonText: {
     color: '#3c4043',
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '500',
   },
   transparentButton: {
     padding: 10,
-    marginTop: 10,
   },
   toggleText: {
-    color: '#63b3ed',
+    color: '#4299e1',
     fontSize: 16,
+    textAlign: 'center',
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -225,10 +273,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#4a5568',
   },
   dividerText: {
-    width: 50,
-    textAlign: 'center',
     color: '#a0aec0',
-    fontSize: 16,
+    paddingHorizontal: 15,
+    fontSize: 14,
   },
 });
 

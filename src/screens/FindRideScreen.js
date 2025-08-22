@@ -5,14 +5,19 @@ import {
   TouchableOpacity,
   StyleSheet,
   FlatList,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { subscribeAvailableRides, deleteRide as dbDeleteRide, updateRide as dbUpdateRide, adminConfig } from '../services/firebase';
+import { ResponsiveContainer, ResponsiveGrid, ResponsiveCard, MobileContainer } from '../components/ResponsiveLayout';
+import { useResponsive } from '../hooks/useResponsive';
+import { useCustomAlert } from '../hooks/useCustomAlert';
+import CustomAlert from '../components/CustomAlert';
 
 const FindRideScreen = ({ setScreen, user }) => {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { isWeb, isMobile, getResponsiveValue } = useResponsive();
+  const { showAlert, alertState, closeAlert } = useCustomAlert();
 
   const isAdmin = user?.email === adminConfig.email;
 
@@ -25,11 +30,11 @@ const FindRideScreen = ({ setScreen, user }) => {
   }, []);
 
   const handleBookRide = (rideId) => {
-    Alert.alert('Sucesso', `Reserva para a carona ${rideId} solicitada! (Funcionalidade a ser implementada)`);
+    showAlert('Sucesso', `Reserva para a carona ${rideId} solicitada! (Funcionalidade a ser implementada)`);
   };
 
   const handleDeleteRide = (rideId) => {
-    Alert.alert(
+    showAlert(
       'Confirmar Exclusão',
       'Tem certeza que deseja excluir esta carona?',
       [
@@ -40,10 +45,10 @@ const FindRideScreen = ({ setScreen, user }) => {
           onPress: async () => {
             try {
               await dbDeleteRide(rideId);
-              Alert.alert('Sucesso', 'Carona excluída com sucesso!');
+              showAlert('Sucesso', 'Carona excluída com sucesso!');
             } catch (error) {
               console.error('Error deleting ride:', error);
-              Alert.alert('Erro', 'Não foi possível excluir a carona.');
+              showAlert('Erro', 'Não foi possível excluir a carona.');
             }
           },
         },
@@ -52,7 +57,7 @@ const FindRideScreen = ({ setScreen, user }) => {
   };
 
   const renderRideItem = ({ item }) => (
-    <View style={styles.rideItem}>
+    <ResponsiveCard style={styles.rideItem}>
       <Text style={styles.rideText}>
         <Text style={styles.bold}>Motorista:</Text> {item.driverName}
       </Text>
@@ -70,7 +75,7 @@ const FindRideScreen = ({ setScreen, user }) => {
         <View style={styles.adminControls}>
           <TouchableOpacity 
             style={[styles.adminButton, styles.editButton]}
-            onPress={() => Alert.alert('Editar', 'Funcionalidade de edição a ser implementada')}
+            onPress={() => showAlert('Editar', 'Funcionalidade de edição a ser implementada')}
           >
             <Text style={styles.adminButtonText}>Editar</Text>
           </TouchableOpacity>
@@ -89,48 +94,63 @@ const FindRideScreen = ({ setScreen, user }) => {
           <Text style={styles.bookButtonText}>Pedir Carona</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </ResponsiveCard>
   );
 
   if (loading) {
+    const LoadingContainer = isMobile ? MobileContainer : ResponsiveContainer;
     return (
-      <View style={styles.loadingContainer}>
+      <LoadingContainer style={styles.loadingContainer} user={user}>
         <ActivityIndicator size="large" color="#4299e1" />
         <Text style={styles.loadingText}>Buscando caronas...</Text>
-      </View>
+      </LoadingContainer>
     );
   }
 
+  // Use MobileContainer for mobile, ResponsiveContainer for web
+  const Container = isMobile ? MobileContainer : ResponsiveContainer;
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Caronas Disponíveis</Text>
+    <Container style={styles.container} user={user}>
+      <CustomAlert
+        visible={alertState.visible}
+        title={alertState.title}
+        message={alertState.message}
+        buttons={alertState.buttons}
+        onClose={closeAlert}
+      />
       
       {rides.length > 0 ? (
-        <FlatList
-          data={rides}
-          renderItem={renderRideItem}
-          keyExtractor={(item) => item.id}
-          style={styles.ridesList}
-          showsVerticalScrollIndicator={false}
-        />
+        isWeb ? (
+          <ResponsiveGrid 
+            columns={getResponsiveValue(1, 2, 3)} 
+            style={styles.ridesGrid}
+          >
+            {rides.map((ride, index) => (
+              <View key={ride.id} style={styles.rideWrapper}>
+                {renderRideItem({ item: ride })}
+              </View>
+            ))}
+          </ResponsiveGrid>
+        ) : (
+          <FlatList
+            data={rides}
+            renderItem={renderRideItem}
+            keyExtractor={(item) => item.id}
+            style={styles.ridesList}
+            showsVerticalScrollIndicator={false}
+          />
+        )
       ) : (
         <Text style={styles.emptyText}>Nenhuma carona disponível no momento.</Text>
       )}
-      
-      <TouchableOpacity 
-        style={styles.backButton} 
-        onPress={() => setScreen('Home')}
-      >
-        <Text style={styles.backButtonText}>Voltar</Text>
-      </TouchableOpacity>
-    </View>
+    </Container>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     alignItems: 'center',
   },
   loadingContainer: {
@@ -149,11 +169,14 @@ const styles = StyleSheet.create({
     width: '100%',
     flex: 1,
   },
+  ridesGrid: {
+    width: '100%',
+    flex: 1,
+  },
+  rideWrapper: {
+    width: '100%',
+  },
   rideItem: {
-    backgroundColor: '#4a5568',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 10,
     width: '100%',
   },
   rideText: {
@@ -206,15 +229,6 @@ const styles = StyleSheet.create({
   adminButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-  },
-  backButton: {
-    position: 'absolute',
-    bottom: 20,
-    padding: 15,
-  },
-  backButtonText: {
-    color: '#63b3ed',
-    fontSize: 16,
   },
 });
 

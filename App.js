@@ -10,9 +10,11 @@ import FindRideScreen from './src/screens/FindRideScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import LoadingScreen from './src/components/LoadingScreen';
 import Header from './src/components/Header';
+import BottomNavigation from './src/components/BottomNavigation';
+import SidebarNavigation from './src/components/SidebarNavigation';
 
 // Import services
-import { mockAuth } from './src/services/mockAuth';
+import { onAuthChanged } from './src/services/firebase';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -21,11 +23,18 @@ export default function App() {
 
   // Authentication effect
   useEffect(() => {
-    // Simulate initial app loading
-    setTimeout(() => {
+    const unsubscribe = onAuthChanged((currentUser) => {
+      if (currentUser) {
+        setUser(currentUser);
+        setScreen('Home');
+      } else {
+        setUser(null);
+        setScreen('Auth');
+      }
       setIsLoading(false);
-      setScreen('Auth'); // Always start with Auth screen
-    }, 1500);
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Render logic
@@ -36,26 +45,26 @@ export default function App() {
 
     switch (screen) {
       case 'Auth':
-        return <AuthScreen onAuthSuccess={(authedUser) => { 
+        return <AuthScreen onAuthSuccess={(authedUser) => {
           console.log('Auth success:', authedUser); // Debug log
-          setUser(authedUser); 
-          setScreen('Home'); 
+          setUser(authedUser);
+          setScreen('Home');
         }} />;
       case 'Home':
-        return <HomeScreen setScreen={setScreen} />;
+        return <FindRideScreen setScreen={setScreen} user={user} />;
       case 'OfferRide':
         return <OfferRideScreen setScreen={setScreen} user={user} />;
       case 'FindRide':
         return <FindRideScreen setScreen={setScreen} user={user} />;
       case 'Profile':
-        return <ProfileScreen setScreen={setScreen} user={user} onSignOut={() => { 
-          setUser(null); 
-          setScreen('Auth'); 
+        return <ProfileScreen setScreen={setScreen} user={user} onSignOut={() => {
+          setUser(null);
+          setScreen('Auth');
         }} />;
       default:
-        return <AuthScreen onAuthSuccess={(authedUser) => { 
-          setUser(authedUser); 
-          setScreen('Home'); 
+        return <AuthScreen onAuthSuccess={(authedUser) => {
+          setUser(authedUser);
+          setScreen('Home');
         }} />;
     }
   };
@@ -63,8 +72,19 @@ export default function App() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      <Header title="ICEA Caronas" />
-      {renderContent()}
+      <Header currentScreen={screen} user={user} />
+      <SidebarNavigation 
+        currentScreen={screen} 
+        onScreenChange={setScreen}
+        user={user}
+      />
+      <View style={styles.content}>
+        {renderContent()}
+      </View>
+      <BottomNavigation 
+        currentScreen={screen} 
+        onScreenChange={setScreen}
+      />
     </View>
   );
 }
@@ -73,5 +93,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#2d3748',
+  },
+  content: {
+    flex: 1,
   },
 });

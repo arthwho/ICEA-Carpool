@@ -1,108 +1,143 @@
-# ICEACarpool - React Native App
+# **CSI606-2025-01 - Remoto - Proposta de Trabalho Final**
 
-A carpooling application for the ICEA (Instituto de Ciências Exatas e Aplicadas) community at UFVJM, built with React Native and Expo.
+## *Discente: Arthur Silva Ferreira Coelho*
 
-## Features
+<!-- Descrever um resumo sobre o trabalho. -->
 
-- **User Authentication**: Login/signup with email or Google account
-- **Find Rides**: Browse available carpool offers from other users
-- **Offer Rides**: Post carpool opportunities for others to join
-- **User Profiles**: Manage account settings and preferences
-- **Admin Controls**: Special privileges for administrators
+### Resumo
 
-## Project Structure
+O trabalho final tem como objetivo o desenvolvimento de um aplicativo móvel multiplataforma para facilitar o compartilhamento de caronas entre estudantes do ICEA (Instituto de Ciências Exatas e Aplicadas) da UFOP. O aplicativo "ICEA Caronas" permite que usuários ofereçam e solicitem caronas de forma segura e eficiente, promovendo a mobilidade sustentável e a integração da comunidade acadêmica.
 
-```
-src/
-├── components/          # Reusable UI components
-│   ├── Header.js       # App header component
-│   ├── LoadingScreen.js # Loading screen component
-│   └── index.js        # Component exports
-├── screens/            # App screens/pages
-│   ├── AuthScreen.js   # Authentication screen
-│   ├── HomeScreen.js   # Main home screen
-│   ├── FindRideScreen.js # Browse available rides
-│   ├── OfferRideScreen.js # Create new ride offers
-│   ├── ProfileScreen.js # User profile management
-│   └── index.js        # Screen exports
-├── services/           # Business logic and external services
-│   ├── mockAuth.js     # Mock authentication service
-│   ├── mockFirestore.js # Mock database service
-│   └── index.js        # Service exports
-└── App.js              # Main app component
-```
+O projeto foi desenvolvido utilizando React Native com Expo, oferecendo compatibilidade tanto para dispositivos móveis quanto para navegadores web. A aplicação integra autenticação Firebase, banco de dados Firestore em tempo real, e sistema de login com Google (Ainda a ser implementado).
 
-## Getting Started
+<!-- Apresentar o tema. -->
+### 1. Tema
 
-### Prerequisites
+O trabalho final tem como tema o desenvolvimento de um sistema de carona compartilhada para a comunidade acadêmica do ICEA/UFOP, abordando questões de mobilidade urbana, sustentabilidade e integração social através de uma solução tecnológica inovadora.
 
-- Node.js (v14 or higher)
-- Expo CLI
-- Android Studio (for Android development)
-- Expo Go app on your device
+<!-- Descrever e limitar o escopo da aplicação. -->
+### 2. Escopo
 
-### Installation
+Este projeto terá as seguintes funcionalidades:
 
-1. Clone the repository:
+**Autenticação e Perfil de Usuário:**
+- Sistema de registro e login com email/senha
+- Integração com Google Sign-In*
+- Perfil de usuário com nome, sobrenome e informações pessoais
+- Persistência de sessão entre sessões
+
+**Gestão de Caronas:**
+- Interface para oferecer caronas com ponto de partida, horário e vagas disponíveis
+- Visualização em tempo real de caronas disponíveis
+- Sistema de solicitação de caronas (funcionalidade em desenvolvimento)
+- Painel administrativo para gerenciamento de caronas
+
+**Interface Responsiva:**
+- Navegação por abas inferiores em dispositivos móveis
+- Sidebar lateral para navegação web
+- Layout adaptativo que se ajusta a diferentes tamanhos de tela
+- Sistema de alertas cross-platform (mobile e web)
+
+**Recursos Técnicos:**
+- Integração completa com Firebase (Authentication e Firestore)
+- Banco de dados em tempo real
+- Compatibilidade total com Expo Go
+- Design responsivo para diferentes dispositivos
+
+<!-- Apresentar restrições de funcionalidades e de escopo. -->
+### 3. Restrições
+
+Neste trabalho não serão considerados:
+
+- Sistema de pagamentos in-app
+- Integração com mapas e GPS em tempo real
+- Sistema de chat entre usuários
+- Notificações push
+- Sistema de avaliações e reviews
+- Histórico detalhado de caronas
+- Integração com redes sociais
+- Sistema de gamificação
+- Funcionalidades offline completas
+- Integração com APIs de transporte público
+
+<!-- Construir alguns protótipos para a aplicação, disponibilizá-los no Github e descrever o que foi considerado. //-->
+### 4. Protótipo
+
+Protótipos para as páginas foram elaborados e implementados, e podem ser encontrados no repositório GitHub: https://github.com/arthwho/ICEA-Carpool
+
+**Páginas Implementadas:**
+- **Tela de Autenticação**: Login e registro com validação de campos
+- **Tela Principal (Caronas)**: Listagem de caronas disponíveis em tempo real
+- **Tela de Oferecer Carona**: Formulário para publicação de novas caronas
+- **Tela de Perfil**: Exibição e gerenciamento de informações do usuário
+- **Navegação Responsiva**: Bottom navigation para mobile e sidebar para web
+
+**Considerações do Protótipo:**
+- Interface adaptativa para diferentes dispositivos
+- Sistema de autenticação robusto com múltiplas opções
+- Banco de dados em tempo real para atualizações instantâneas
+- Design moderno e intuitivo seguindo padrões de UX/UI
+- Compatibilidade cross-platform (mobile e web)
+
+## 🚀 Como Executar o Projeto
+
+### Pré-requisitos
+- Node.js (versão 16 ou superior)
+- npm ou yarn
+- Expo CLI: `npm install -g @expo/cli`
+- Git
+- Expo Go (aplicativo móvel para testes)
+
+### Configuração
+
+1. **Clone o Repositório**
 ```bash
-git clone <repository-url>
-cd ICEACarpool
+git clone https://github.com/arthwho/ICEA-Carpool.git
+cd ICEA-Carpool
 ```
 
-2. Install dependencies:
+2. **Instale as Dependências**
 ```bash
 npm install
-# or
-yarn install
 ```
 
-3. Start the development server:
+3. **Configure as Variáveis de Ambiente**
+Crie um arquivo `.env` na raiz do projeto:
 ```bash
-npm start
-# or
-yarn start
+# Firebase Configuration
+FIREBASE_API_KEY=sua_api_key_aqui
+FIREBASE_AUTH_DOMAIN=seu_projeto.firebaseapp.com
+FIREBASE_PROJECT_ID=seu_projeto_id
+FIREBASE_STORAGE_BUCKET=seu_projeto.appspot.com
+FIREBASE_MESSAGING_SENDER_ID=123456789
+FIREBASE_APP_ID=1:123456789:web:abcdef123456
+FIREBASE_MEASUREMENT_ID=G-ABCDEF1234
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=seu_google_client_id_aqui
+GOOGLE_CLIENT_SECRET=seu_google_client_secret_aqui
+
+# Admin Configuration
+ADMIN_EMAIL=admin@example.com
 ```
 
-4. Scan the QR code with Expo Go app or press 'a' for Android emulator
+4. **Configure o Firebase**
+- Crie um projeto no [Firebase Console](https://console.firebase.google.com)
+- Ative Authentication (Email/Password e Google)
+- Crie um banco Firestore com regras de segurança adequadas
+- Configure Google OAuth no Google Cloud Console
 
-## Development Notes
+5. **Execute o Projeto**
+```bash
+npx expo start
+```
 
-### Current Implementation
-- **Mock Services**: The app currently uses mock authentication and database services for development
-- **React Native Components**: All web-specific components have been converted to React Native equivalents
-- **Expo Compatibility**: Built specifically for Expo Go compatibility
+### 5. Referências
 
-### Future Enhancements
-- Replace mock services with real Firebase integration
-- Add push notifications for ride updates
-- Implement real-time chat between drivers and passengers
-- Add location services and maps integration
-- Implement payment processing
+REACT NATIVE. **Documentação oficial**. Disponível em: https://reactnative.dev/docs/getting-started. Acesso em: 2024.
 
-### Testing
-- Use any email with password "password" for login
-- Admin access: arthwho@gmail.com
-- Mock data includes sample rides for testing
+EXPO. **Documentação oficial**. Disponível em: https://docs.expo.dev/. Acesso em: 2024.
 
-## Technologies Used
+FIREBASE. **Documentação oficial**. Disponível em: https://firebase.google.com/docs. Acesso em: 2024.
 
-- **React Native**: Cross-platform mobile development
-- **Expo**: Development platform and tools
-- **JavaScript**: ES6+ features
-- **StyleSheet**: React Native styling system
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is part of an IHC (Human-Computer Interaction) course at UFVJM.
-
-## Support
-
-For questions or support, please contact the development team or refer to the course materials.
+GOOGLE CLOUD. **Documentação oficial**. Disponível em: https://cloud.google.com/docs. Acesso em: 2024.
