@@ -50,7 +50,6 @@ export const ResponsiveGrid = ({ children, columns = 1, style }) => {
         gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
         gap: '20px',
         width: '100%',
-        padding: '0 10px', // Add some padding to prevent cards from touching edges
       },
       !isWeb && {
         flexDirection: 'column',
@@ -113,19 +112,15 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  mobileContainer: {
-    padding: 20,
-    paddingBottom: 100, // Extra padding for bottom navigation
-  },
   webContainer: {
-    padding: 20, // Equal padding on all sides
+    padding: 8, // Equal padding on all sides
     width: '100vw',
     minHeight: '100vh',
     marginTop: 76, // Account for fixed header height (24px padding * 2 + 28px font height)
   },
   webContainerWithSidebar: {
     marginLeft: 250, // Account for sidebar width
-    padding: 20, // Equal padding on all sides when sidebar is present
+    padding: 0, // Equal padding on all sides when sidebar is present
     width: 'calc(100vw - 250px)', // Subtract sidebar width from viewport width
   },
   grid: {

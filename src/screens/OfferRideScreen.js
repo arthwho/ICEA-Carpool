@@ -7,6 +7,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from 'react-native';
 import CustomNumberInput from '../components/CustomNumberInput';
 import CustomTimePicker from '../components/CustomTimePicker';
@@ -353,9 +354,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 24,
+    ...(Platform.OS === 'web' && {
+      alignItems: 'center',
+      justifyContent: 'center',
+    }),
   },
   title: {
     fontSize: 28,

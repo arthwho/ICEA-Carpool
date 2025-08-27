@@ -6,6 +6,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { signOut as firebaseSignOut, getUserProfile, getDriverCarInfo, updateDriverCarInfo } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
@@ -143,7 +144,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
       >
         <View style={[styles.profileCard, { backgroundColor: theme.surface.primary }]}>
           
-          <View style={styles.infoSection}>
+          {/* <View style={styles.infoSection}>
             <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome:</Text>
             <Text style={[styles.value, { color: theme.text.secondary }]}>
               {userProfile?.firstName || user?.email?.split('@')[0] || 'N/A'}
@@ -155,10 +156,10 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
             <Text style={[styles.value, { color: theme.text.secondary }]}>
               {userProfile?.lastName || 'N/A'}
             </Text>
-          </View>
+          </View> */}
 
           <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome Completo:</Text>
+            <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome:</Text>
             <Text style={[styles.value, { color: theme.text.secondary }]}>
               {userProfile?.name || `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 'N/A'}
             </Text>
@@ -245,13 +246,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    alignItems: 'center',
-    padding: 20,
-    paddingTop: 40,
-    paddingBottom: 100, // Extra padding to ensure logout button is reachable
+    padding: 24,
+    ...(Platform.OS === 'web' && {
+      alignItems: 'center',
+      justifyContent: 'center',
+    }),
   },
   profileCard: {
-    padding: 20,
     borderRadius: 12,
     width: '100%',
     maxWidth: 400,

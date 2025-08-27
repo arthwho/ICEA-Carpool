@@ -215,6 +215,8 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    padding: 24,
+    paddingBottom: 64,
   },
   loadingContainer: {
     flex: 1,
