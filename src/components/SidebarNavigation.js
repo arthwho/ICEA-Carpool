@@ -26,6 +26,18 @@ const SidebarNavigation = ({ currentScreen, onScreenChange, user }) => {
       screen: 'OfferRide',
     },
     {
+      id: 'ManagePassengers',
+      label: 'Gerenciar Passageiros',
+      icon: '👥',
+      screen: 'ManagePassengers',
+    },
+    {
+      id: 'RideHistory',
+      label: 'Histórico',
+      icon: '📋',
+      screen: 'RideHistory',
+    },
+    {
       id: 'Profile',
       label: 'Perfil',
       icon: '👤',

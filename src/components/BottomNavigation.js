@@ -26,6 +26,18 @@ const BottomNavigation = ({ currentScreen, onScreenChange }) => {
       screen: 'OfferRide',
     },
     {
+      id: 'ManagePassengers',
+      label: 'Gerenciar',
+      icon: '👥',
+      screen: 'ManagePassengers',
+    },
+    {
+      id: 'RideHistory',
+      label: 'Histórico',
+      icon: '📋',
+      screen: 'RideHistory',
+    },
+    {
       id: 'Profile',
       label: 'Perfil',
       icon: '👤',

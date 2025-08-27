@@ -15,6 +15,7 @@ import {
   doc, 
   setDoc, 
   getDoc, 
+  getDocs,
   collection, 
   addDoc, 
   onSnapshot, 
@@ -278,6 +279,375 @@ export const updateRide = async (rideId, updateData) => {
   await updateDoc(rideRef, {
     ...updateData,
     updatedAt: new Date() // Data da última atualização
+  });
+};
+
+// ========================================
+// FUNÇÕES DE RESERVA E GESTÃO DE PASSAGEIROS
+// ========================================
+
+/**
+ * Faz uma reserva de carona
+ * @param {string} rideId - ID da carona
+ * @param {string} passengerId - ID do passageiro
+ * @param {Object} passengerInfo - Informações do passageiro (nome, telefone, etc.)
+ */
+export const requestRide = async (rideId, passengerId, passengerInfo) => {
+  const reservationRef = doc(db, 'reservations', `${rideId}_${passengerId}`);
+  
+  await setDoc(reservationRef, {
+    rideId,
+    passengerId,
+    passengerName: passengerInfo.name,
+    passengerPhone: passengerInfo.phone,
+    status: 'pending', // pending, accepted, rejected, cancelled
+    requestedAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  // Adiciona à lista de espera da carona
+  const rideRef = doc(db, 'rides', rideId);
+  const rideSnap = await getDoc(rideRef);
+  const rideData = rideSnap.data();
+  
+  const currentRequests = rideData.pendingRequests || [];
+  const waitingList = rideData.waitingList || [];
+  
+  // Se ainda há vagas disponíveis, adiciona à lista de pedidos pendentes
+  if (currentRequests.length < rideData.availableSeats) {
+    await updateDoc(rideRef, {
+      pendingRequests: [...currentRequests, {
+        passengerId,
+        passengerName: passengerInfo.name,
+        requestedAt: new Date()
+      }],
+      updatedAt: new Date()
+    });
+  } else {
+    // Se não há vagas, adiciona à lista de espera
+    await updateDoc(rideRef, {
+      waitingList: [...waitingList, {
+        passengerId,
+        passengerName: passengerInfo.name,
+        requestedAt: new Date()
+      }],
+      updatedAt: new Date()
+    });
+  }
+};
+
+/**
+ * Aprova uma reserva de carona (usado pelo motorista)
+ * @param {string} rideId - ID da carona
+ * @param {string} passengerId - ID do passageiro
+ */
+export const approveReservation = async (rideId, passengerId) => {
+  const reservationRef = doc(db, 'reservations', `${rideId}_${passengerId}`);
+  
+  // Atualiza o status da reserva
+  await updateDoc(reservationRef, {
+    status: 'accepted',
+    approvedAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  // Atualiza a carona
+  const rideRef = doc(db, 'rides', rideId);
+  const rideSnap = await getDoc(rideRef);
+  const rideData = rideSnap.data();
+  
+  const pendingRequests = rideData.pendingRequests || [];
+  const passengers = rideData.passengers || [];
+  const waitingList = rideData.waitingList || [];
+  
+  // Remove da lista de pedidos pendentes
+  const updatedPendingRequests = pendingRequests.filter(req => req.passengerId !== passengerId);
+  
+  // Adiciona à lista de passageiros confirmados
+  const approvedPassenger = pendingRequests.find(req => req.passengerId === passengerId);
+  const updatedPassengers = [...passengers, {
+    ...approvedPassenger,
+    approvedAt: new Date()
+  }];
+  
+  // Se houver pessoas na lista de espera e ainda há vagas, move uma para pendentes
+  let updatedWaitingList = waitingList;
+  if (waitingList.length > 0 && updatedPendingRequests.length < rideData.availableSeats - updatedPassengers.length) {
+    const nextInLine = waitingList[0];
+    updatedWaitingList = waitingList.slice(1);
+    updatedPendingRequests.push(nextInLine);
+  }
+  
+  await updateDoc(rideRef, {
+    pendingRequests: updatedPendingRequests,
+    passengers: updatedPassengers,
+    waitingList: updatedWaitingList,
+    updatedAt: new Date()
+  });
+};
+
+/**
+ * Rejeita uma reserva de carona (usado pelo motorista)
+ * @param {string} rideId - ID da carona
+ * @param {string} passengerId - ID do passageiro
+ */
+export const rejectReservation = async (rideId, passengerId) => {
+  const reservationRef = doc(db, 'reservations', `${rideId}_${passengerId}`);
+  
+  // Atualiza o status da reserva
+  await updateDoc(reservationRef, {
+    status: 'rejected',
+    rejectedAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  // Remove da lista de pedidos pendentes
+  const rideRef = doc(db, 'rides', rideId);
+  const rideSnap = await getDoc(rideRef);
+  const rideData = rideSnap.data();
+  
+  const pendingRequests = rideData.pendingRequests || [];
+  const waitingList = rideData.waitingList || [];
+  
+  const updatedPendingRequests = pendingRequests.filter(req => req.passengerId !== passengerId);
+  
+  // Se houver pessoas na lista de espera, move uma para pendentes
+  let updatedWaitingList = waitingList;
+  if (waitingList.length > 0) {
+    const nextInLine = waitingList[0];
+    updatedWaitingList = waitingList.slice(1);
+    updatedPendingRequests.push(nextInLine);
+  }
+  
+  await updateDoc(rideRef, {
+    pendingRequests: updatedPendingRequests,
+    waitingList: updatedWaitingList,
+    updatedAt: new Date()
+  });
+};
+
+/**
+ * Cancela uma reserva (usado pelo passageiro)
+ * @param {string} rideId - ID da carona
+ * @param {string} passengerId - ID do passageiro
+ */
+export const cancelReservation = async (rideId, passengerId) => {
+  const reservationRef = doc(db, 'reservations', `${rideId}_${passengerId}`);
+  
+  // Atualiza o status da reserva
+  await updateDoc(reservationRef, {
+    status: 'cancelled',
+    cancelledAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  // Remove da carona
+  const rideRef = doc(db, 'rides', rideId);
+  const rideSnap = await getDoc(rideRef);
+  const rideData = rideSnap.data();
+  
+  const pendingRequests = rideData.pendingRequests || [];
+  const passengers = rideData.passengers || [];
+  const waitingList = rideData.waitingList || [];
+  
+  // Remove das listas relevantes
+  const updatedPendingRequests = pendingRequests.filter(req => req.passengerId !== passengerId);
+  const updatedPassengers = passengers.filter(p => p.passengerId !== passengerId);
+  
+  // Se houver pessoas na lista de espera, move uma para pendentes
+  let updatedWaitingList = waitingList;
+  if (waitingList.length > 0 && updatedPendingRequests.length + updatedPassengers.length < rideData.availableSeats) {
+    const nextInLine = waitingList[0];
+    updatedWaitingList = waitingList.slice(1);
+    updatedPendingRequests.push(nextInLine);
+  }
+  
+  await updateDoc(rideRef, {
+    pendingRequests: updatedPendingRequests,
+    passengers: updatedPassengers,
+    waitingList: updatedWaitingList,
+    updatedAt: new Date()
+  });
+};
+
+/**
+ * Busca reservas de um usuário específico
+ * @param {string} userId - ID do usuário
+ * @returns {Promise<Array>} Lista de reservas do usuário
+ */
+export const getUserReservations = async (userId) => {
+  const reservationsRef = collection(db, 'reservations');
+  const q = query(reservationsRef, where('passengerId', '==', userId));
+  
+  const snapshot = await getDocs(q);
+  const reservations = [];
+  
+  snapshot.forEach((doc) => {
+    reservations.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  return reservations;
+};
+
+/**
+ * Busca reservas para caronas de um motorista específico
+ * @param {string} driverId - ID do motorista
+ * @returns {Promise<Array>} Lista de reservas para caronas do motorista
+ */
+export const getDriverReservations = async (driverId) => {
+  // Primeiro busca as caronas do motorista
+  const ridesRef = collection(db, 'rides');
+  const ridesQuery = query(ridesRef, where('driverId', '==', driverId));
+  const ridesSnapshot = await getDocs(ridesQuery);
+  
+  const rideIds = [];
+  ridesSnapshot.forEach((doc) => {
+    rideIds.push(doc.id);
+  });
+  
+  // Depois busca as reservas para essas caronas
+  if (rideIds.length === 0) return [];
+  
+  const reservationsRef = collection(db, 'reservations');
+  const reservationsQuery = query(reservationsRef, where('rideId', 'in', rideIds));
+  const reservationsSnapshot = await getDocs(reservationsQuery);
+  
+  const reservations = [];
+  reservationsSnapshot.forEach((doc) => {
+    reservations.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  return reservations;
+};
+
+/**
+ * Listener em tempo real para reservas de um usuário
+ * @param {string} userId - ID do usuário
+ * @param {Function} callback - Função chamada quando as reservas mudam
+ * @returns {Function} Função para cancelar o listener
+ */
+export const subscribeUserReservations = (userId, callback) => {
+  const reservationsRef = collection(db, 'reservations');
+  const q = query(reservationsRef, where('passengerId', '==', userId));
+  
+  return onSnapshot(q, (snapshot) => {
+    const reservations = [];
+    snapshot.forEach((doc) => {
+      reservations.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    callback(reservations);
+  });
+};
+
+// ========================================
+// FUNÇÕES DE HISTÓRICO DE CARONAS
+// ========================================
+
+/**
+ * Marca uma carona como finalizada e move para o histórico
+ * @param {string} rideId - ID da carona
+ */
+export const completeRide = async (rideId) => {
+  const rideRef = doc(db, 'rides', rideId);
+  
+  // Busca os dados da carona
+  const rideSnap = await getDoc(rideRef);
+  const rideData = rideSnap.data();
+  
+  // Atualiza o status para completed
+  await updateDoc(rideRef, {
+    status: 'completed',
+    completedAt: new Date(),
+    updatedAt: new Date()
+  });
+  
+  // Cria entradas no histórico para o motorista e passageiros
+  const historyRef = collection(db, 'rideHistory');
+  
+  // Histórico do motorista
+  await addDoc(historyRef, {
+    userId: rideData.driverId,
+    rideId: rideId,
+    role: 'driver',
+    origin: rideData.origin,
+    destination: rideData.destination,
+    departureTime: rideData.departureTime,
+    passengers: rideData.passengers || [],
+    price: rideData.price,
+    completedAt: new Date()
+  });
+  
+  // Histórico dos passageiros
+  const passengers = rideData.passengers || [];
+  for (const passenger of passengers) {
+    await addDoc(historyRef, {
+      userId: passenger.passengerId,
+      rideId: rideId,
+      role: 'passenger',
+      origin: rideData.origin,
+      destination: rideData.destination,
+      departureTime: rideData.departureTime,
+      driverName: rideData.driverName,
+      price: rideData.price,
+      completedAt: new Date()
+    });
+  }
+};
+
+/**
+ * Busca o histórico de caronas de um usuário
+ * @param {string} userId - ID do usuário
+ * @returns {Promise<Array>} Lista de caronas no histórico
+ */
+export const getUserRideHistory = async (userId) => {
+  const historyRef = collection(db, 'rideHistory');
+  const q = query(historyRef, where('userId', '==', userId));
+  
+  const snapshot = await getDocs(q);
+  const history = [];
+  
+  snapshot.forEach((doc) => {
+    history.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  // Ordena por data de conclusão (mais recente primeiro)
+  return history.sort((a, b) => b.completedAt - a.completedAt);
+};
+
+/**
+ * Listener em tempo real para histórico de caronas de um usuário
+ * @param {string} userId - ID do usuário
+ * @param {Function} callback - Função chamada quando o histórico muda
+ * @returns {Function} Função para cancelar o listener
+ */
+export const subscribeUserRideHistory = (userId, callback) => {
+  const historyRef = collection(db, 'rideHistory');
+  const q = query(historyRef, where('userId', '==', userId));
+  
+  return onSnapshot(q, (snapshot) => {
+    const history = [];
+    snapshot.forEach((doc) => {
+      history.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    
+    // Ordena por data de conclusão (mais recente primeiro)
+    const sortedHistory = history.sort((a, b) => b.completedAt - a.completedAt);
+    callback(sortedHistory);
   });
 };
 

@@ -7,7 +7,13 @@ import {
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
-import { subscribeAvailableRides, deleteRide as dbDeleteRide, adminConfig } from '../services/firebase';
+import { 
+  subscribeAvailableRides, 
+  deleteRide as dbDeleteRide, 
+  adminConfig,
+  requestRide,
+  getUserProfile 
+} from '../services/firebase';
 import { ResponsiveContainer, MobileContainer, ResponsiveGrid, ResponsiveCard } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
@@ -30,6 +36,10 @@ const FindRideScreen = ({ setScreen, user }) => {
   
   // Estado de carregamento inicial
   const [loading, setLoading] = useState(true);
+  
+  // Estados para reserva de carona
+  const [requestingRide, setRequestingRide] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
   
   // ========================================
   // HOOKS PARA RESPONSIVIDADE E TEMA
@@ -70,10 +80,90 @@ const FindRideScreen = ({ setScreen, user }) => {
     return () => unsubscribe();
   }, []);
 
+  /**
+   * Carrega o perfil do usuário para obter informações necessárias para reserva
+   */
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (user?.uid) {
+        try {
+          const profile = await getUserProfile(user.uid);
+          setUserProfile(profile);
+        } catch (error) {
+          console.error('Error loading user profile:', error);
+        }
+      }
+    };
+
+    loadUserProfile();
+  }, [user?.uid]);
+
   // ========================================
-  // FUNÇÃO DE EXCLUSÃO DE CARONAS
+  // FUNÇÕES DE GESTÃO DE CARONAS
   // ========================================
   
+  /**
+   * Função para solicitar uma reserva de carona
+   * @param {string} rideId - ID da carona
+   */
+  const handleRequestRide = async (rideId) => {
+    // Verifica se o usuário não é o próprio motorista
+    const ride = rides.find(r => r.id === rideId);
+    if (ride?.driverId === user?.uid) {
+      showAlert('Erro', 'Você não pode reservar sua própria carona.');
+      return;
+    }
+
+    // Verifica se o usuário já fez um pedido para esta carona
+    if (ride?.pendingRequests?.some(req => req.passengerId === user?.uid) ||
+        ride?.passengers?.some(p => p.passengerId === user?.uid) ||
+        ride?.waitingList?.some(w => w.passengerId === user?.uid)) {
+      showAlert('Aviso', 'Você já solicitou uma reserva para esta carona.');
+      return;
+    }
+
+    // Verifica se o perfil do usuário está carregado
+    if (!userProfile) {
+      showAlert('Erro', 'Carregando informações do perfil. Tente novamente.');
+      return;
+    }
+
+    setRequestingRide(rideId);
+    try {
+      // Prepara as informações do passageiro
+      const passengerInfo = {
+        name: userProfile.name || 
+              `${userProfile.firstName || ''} ${userProfile.lastName || ''}`.trim() || 
+              user.email?.split('@')[0] || 
+              'Usuário',
+        phone: userProfile.phone || 'Não informado'
+      };
+
+      await requestRide(rideId, user.uid, passengerInfo);
+      
+      // Verifica se foi para lista de espera ou pendentes
+      const updatedRide = rides.find(r => r.id === rideId);
+      const currentRequests = updatedRide?.pendingRequests?.length || 0;
+      
+      if (currentRequests >= updatedRide?.availableSeats) {
+        showAlert(
+          'Na Lista de Espera', 
+          'A carona está lotada. Você foi adicionado à lista de espera e será notificado se uma vaga abrir.'
+        );
+      } else {
+        showAlert(
+          'Solicitação Enviada', 
+          'Sua solicitação foi enviada ao motorista. Você receberá uma confirmação em breve.'
+        );
+      }
+    } catch (error) {
+      console.error('Error requesting ride:', error);
+      showAlert('Erro', 'Não foi possível solicitar a reserva. Tente novamente.');
+    } finally {
+      setRequestingRide(null);
+    }
+  };
+
   /**
    * Função para excluir uma carona (apenas para administradores)
    * Remove a carona do Firestore, que automaticamente atualiza a lista
@@ -185,7 +275,28 @@ const FindRideScreen = ({ setScreen, user }) => {
                     </Text>
                   </View>
                 )}
+
+                {/* Status da carona */}
+                <View style={styles.statusContainer}>
+                  {/* Vagas ocupadas e disponíveis */}
+                  <View style={styles.seatsInfo}>
+                    <Text style={[styles.seatsText, { color: theme.text.tertiary }]}>
+                      Vagas: {item.availableSeats - (item.passengers?.length || 0)}/{item.availableSeats} disponíveis
+                    </Text>
+                    {item.pendingRequests && item.pendingRequests.length > 0 && (
+                      <Text style={[styles.pendingText, { color: theme.interactive.active }]}>
+                        {item.pendingRequests.length} pedido(s) pendente(s)
+                      </Text>
+                    )}
+                    {item.waitingList && item.waitingList.length > 0 && (
+                      <Text style={[styles.waitingText, { color: theme.text.secondary }]}>
+                        {item.waitingList.length} na lista de espera
+                      </Text>
+                    )}
+                  </View>
+                </View>
                 
+                {/* Botões de ação */}
                 {isAdmin ? (
                   <TouchableOpacity
                     style={[styles.deleteButton, { backgroundColor: theme.interactive.button.danger }]}
@@ -193,10 +304,72 @@ const FindRideScreen = ({ setScreen, user }) => {
                   >
                     <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Excluir Carona</Text>
                   </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity style={[styles.bookButton, { backgroundColor: theme.status.available }]}>
-                    <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Reservar Vaga</Text>
+                ) : item.driverId === user?.uid ? (
+                  <TouchableOpacity 
+                    style={[styles.ownRideButton, { backgroundColor: theme.surface.secondary, borderColor: theme.interactive.active }]}
+                    disabled
+                  >
+                    <Text style={[styles.buttonText, { color: theme.text.tertiary }]}>Sua Carona</Text>
                   </TouchableOpacity>
+                ) : (
+                  (() => {
+                    // Verifica o status do usuário nesta carona
+                    const hasRequested = item.pendingRequests?.some(req => req.passengerId === user?.uid);
+                    const isConfirmed = item.passengers?.some(p => p.passengerId === user?.uid);
+                    const isWaiting = item.waitingList?.some(w => w.passengerId === user?.uid);
+                    const isRequesting = requestingRide === item.id;
+                    
+                    if (isConfirmed) {
+                      return (
+                        <TouchableOpacity 
+                          style={[styles.confirmedButton, { backgroundColor: theme.status.available }]}
+                          disabled
+                        >
+                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>✓ Confirmado</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+                    
+                    if (hasRequested) {
+                      return (
+                        <TouchableOpacity 
+                          style={[styles.pendingButton, { backgroundColor: theme.interactive.active, opacity: 0.7 }]}
+                          disabled
+                        >
+                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Aguardando Aprovação</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+                    
+                    if (isWaiting) {
+                      return (
+                        <TouchableOpacity 
+                          style={[styles.waitingButton, { backgroundColor: theme.text.secondary, opacity: 0.7 }]}
+                          disabled
+                        >
+                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Na Lista de Espera</Text>
+                        </TouchableOpacity>
+                      );
+                    }
+                    
+                    return (
+                      <TouchableOpacity 
+                        style={[styles.bookButton, { 
+                          backgroundColor: isRequesting ? theme.text.secondary : theme.status.available 
+                        }]}
+                        onPress={() => handleRequestRide(item.id)}
+                        disabled={isRequesting}
+                      >
+                        {isRequesting ? (
+                          <ActivityIndicator size="small" color={theme.text.inverse} />
+                        ) : (
+                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>
+                            {(item.passengers?.length || 0) >= item.availableSeats ? 'Entrar na Lista de Espera' : 'Solicitar Reserva'}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })()
                 )}
               </ResponsiveCard>
             ))}
@@ -273,6 +446,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 2,
   },
+  statusContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  seatsInfo: {
+    marginBottom: 5,
+  },
+  seatsText: {
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  pendingText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginBottom: 2,
+  },
+  waitingText: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
   bookButton: {
     padding: 12,
     borderRadius: 8,
@@ -280,6 +473,31 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   deleteButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  ownRideButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+    borderWidth: 1,
+  },
+  confirmedButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  pendingButton: {
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 15,
+  },
+  waitingButton: {
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',

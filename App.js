@@ -8,10 +8,12 @@ import HomeScreen from './src/screens/HomeScreen';
 import OfferRideScreen from './src/screens/OfferRideScreen';
 import FindRideScreen from './src/screens/FindRideScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import RideHistoryScreen from './src/screens/RideHistoryScreen';
 import LoadingScreen from './src/components/LoadingScreen';
 import Header from './src/components/Header';
 import BottomNavigation from './src/components/BottomNavigation';
 import SidebarNavigation from './src/components/SidebarNavigation';
+import PassengerManagement from './src/components/PassengerManagement';
 
 // Importação dos serviços Firebase
 import { onAuthChanged } from './src/services/firebase';
@@ -108,6 +110,14 @@ function AppContent() {
           setUser(null);
           setScreen('Auth'); // Volta para autenticação após logout
         }} />;
+
+      case 'RideHistory':
+        // Tela de histórico de caronas
+        return <RideHistoryScreen setScreen={setScreen} user={user} />;
+
+      case 'ManagePassengers':
+        // Componente de gestão de passageiros
+        return <PassengerManagement user={user} />;
         
       default:
         // Fallback para tela de autenticação

@@ -25,6 +25,18 @@ const HomeScreen = ({ setScreen }) => {
       color: '#38b2ac',
     },
     {
+      title: 'Gerenciar Passageiros',
+      description: 'Gerencie pedidos e caronas ativas',
+      onPress: () => setScreen('ManagePassengers'),
+      color: '#9f7aea',
+    },
+    {
+      title: 'Histórico de Caronas',
+      description: 'Veja suas caronas anteriores',
+      onPress: () => setScreen('RideHistory'),
+      color: '#f56565',
+    },
+    {
       title: 'Meu Perfil',
       description: 'Gerencie suas informações',
       onPress: () => setScreen('Profile'),
