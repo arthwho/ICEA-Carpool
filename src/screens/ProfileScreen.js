@@ -8,7 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { signOut as firebaseSignOut, getUserProfile, getDriverCarInfo, updateDriverCarInfo } from '../services/firebase';
+import { signOut as firebaseSignOut, getUserProfile, getDriverCarInfo, updateDriverCarInfo, USER_ROLES, isAdmin, isModerator } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
@@ -142,85 +142,154 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.profileCard, { backgroundColor: theme.surface.primary }]}>
-          
-          {/* <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome:</Text>
-            <Text style={[styles.value, { color: theme.text.secondary }]}>
-              {userProfile?.firstName || user?.email?.split('@')[0] || 'N/A'}
+        {/* Profile Header */}
+        <View style={[styles.profileHeader, { backgroundColor: theme.surface.primary }]}>
+          <View style={[styles.avatarContainer, { backgroundColor: theme.interactive.active + '20' }]}>
+            <Text style={[styles.avatarText, { color: theme.interactive.active }]}>
+              {(userProfile?.name || user?.email)?.charAt(0).toUpperCase() || '?'}
             </Text>
           </View>
-
-          <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Sobrenome:</Text>
-            <Text style={[styles.value, { color: theme.text.secondary }]}>
-              {userProfile?.lastName || 'N/A'}
+          <View style={styles.headerInfo}>
+            <Text style={[styles.userName, { color: theme.text.primary }]}>
+              {userProfile?.name || `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 'Usuário'}
             </Text>
-          </View> */}
-
-          <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Nome:</Text>
-            <Text style={[styles.value, { color: theme.text.secondary }]}>
-              {userProfile?.name || `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim() || 'N/A'}
-            </Text>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Email:</Text>
-            <Text style={[styles.value, { color: theme.text.secondary }]}>{user?.email}</Text>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>ID do Usuário:</Text>
-            <Text style={[styles.value, { color: theme.text.secondary }]}>{user?.uid}</Text>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Status:</Text>
-            <Text style={[styles.status, { color: theme.status.available }]}>Ativo</Text>
-          </View>
-
-          <View style={styles.infoSection}>
-            <Text style={[styles.label, { color: theme.text.tertiary }]}>Tipo de Usuário:</Text>
-            <Text style={[
-              styles.value, 
-              { color: theme.text.secondary },
-              userProfile?.isDriver && { color: theme.interactive.active, fontWeight: 'bold' }
-            ]}>
-              {userProfile?.isDriver ? 'Motorista' : 'Passageiro'}
-            </Text>
-          </View>
-
-          {/* Car Information Card for Drivers */}
-          {userProfile?.isDriver && carInfo && (
-            <View style={[styles.carInfoCard, { 
-              backgroundColor: theme.interactive.active + '1A',
-              borderLeftColor: theme.interactive.active 
-            }]}>
-              <View style={styles.carInfoHeader}>
-                <Text style={[styles.carInfoTitle, { color: theme.interactive.active }]}>Informações do Veículo</Text>
-                <TouchableOpacity
-                  style={[styles.editButton, { backgroundColor: theme.interactive.button.primary }]}
-                  onPress={handleEditCarInfo}
-                >
-                  <Text style={[styles.editButtonText, { color: theme.text.inverse }]}>Editar</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.carInfoSection}>
-                <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Modelo:</Text>
-                <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.model}</Text>
-              </View>
-              <View style={styles.carInfoSection}>
-                <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Cor:</Text>
-                <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.color}</Text>
-              </View>
-              <View style={styles.carInfoSection}>
-                <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Placa:</Text>
-                <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.licensePlate}</Text>
+            <View style={styles.userBadges}>
+              {/* Admin Badge */}
+              {isAdmin(userProfile) && (
+                <View style={[styles.statusBadge, styles.adminBadge, { backgroundColor: theme.interactive.button.danger }]}>
+                  <Text style={[styles.statusText, { color: theme.text.inverse }]}>
+                    👑 Admin
+                  </Text>
+                </View>
+              )}
+              
+              {/* Moderator Badge */}
+              {isModerator(userProfile) && !isAdmin(userProfile) && (
+                <View style={[styles.statusBadge, styles.moderatorBadge, { backgroundColor: theme.interactive.button.secondary }]}>
+                  <Text style={[styles.statusText, { color: theme.text.primary }]}>
+                    🛡️ Moderador
+                  </Text>
+                </View>
+              )}
+              
+              {/* Driver Badge */}
+              {userProfile?.isDriver && (
+                <View style={[styles.statusBadge, styles.driverBadge, { backgroundColor: theme.interactive.active }]}>
+                  <Text style={[styles.statusText, { color: theme.text.inverse }]}>
+                    🚗 Motorista
+                  </Text>
+                </View>
+              )}
+              
+              {/* Passenger Badge - Always show for all users since everyone can request rides */}
+              <View style={[styles.statusBadge, styles.passengerBadge, { backgroundColor: theme.status.available }]}>
+                <Text style={[styles.statusText, { color: theme.text.inverse }]}>
+                  👤 Passageiro
+                </Text>
               </View>
             </View>
-          )}
+          </View>
         </View>
+
+        {/* Personal Information Card */}
+        <View style={[styles.infoCard, { backgroundColor: theme.surface.primary }]}>
+          <Text style={[styles.cardTitle, { color: theme.text.primary }]}>Informações Pessoais</Text>
+          
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Text style={styles.iconText}>📧</Text>
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={[styles.infoLabel, { color: theme.text.tertiary }]}>Email</Text>
+              <Text style={[styles.infoValue, { color: theme.text.secondary }]}>{user?.email}</Text>
+            </View>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Text style={styles.iconText}>✅</Text>
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={[styles.infoLabel, { color: theme.text.tertiary }]}>Status da Conta</Text>
+              <Text style={[styles.activeStatus, { color: theme.status.available }]}>Ativo</Text>
+            </View>
+          </View>
+          
+          <View style={styles.infoRow}>
+            <View style={styles.infoIcon}>
+              <Text style={styles.iconText}>🎯</Text>
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={[styles.infoLabel, { color: theme.text.tertiary }]}>Nível de Acesso</Text>
+              <Text style={[styles.infoValue, { color: theme.text.secondary }]}>
+                {isAdmin(userProfile) ? 'Administrador' : 
+                 isModerator(userProfile) ? 'Moderador' : 
+                 'Usuário Padrão'}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Car Information Card for Drivers */}
+        {userProfile?.isDriver && (
+          <View style={[styles.infoCard, { backgroundColor: theme.surface.primary }]}>
+            <View style={styles.cardHeader}>
+              <Text style={[styles.cardTitle, { color: theme.text.primary }]}>Meu Veículo</Text>
+              <TouchableOpacity
+                style={[styles.editButton, { backgroundColor: theme.interactive.button.primary }]}
+                onPress={handleEditCarInfo}
+              >
+                <Text style={[styles.editButtonText, { color: theme.text.inverse }]}>Editar</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {carInfo ? (
+              <>
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Text style={styles.iconText}>🚗</Text>
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={[styles.infoLabel, { color: theme.text.tertiary }]}>Modelo</Text>
+                    <Text style={[styles.infoValue, { color: theme.text.secondary }]}>{carInfo.model}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Text style={styles.iconText}>🎨</Text>
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={[styles.infoLabel, { color: theme.text.tertiary }]}>Cor</Text>
+                    <Text style={[styles.infoValue, { color: theme.text.secondary }]}>{carInfo.color}</Text>
+                  </View>
+                </View>
+                
+                <View style={styles.infoRow}>
+                  <View style={styles.infoIcon}>
+                    <Text style={styles.iconText}>🔢</Text>
+                  </View>
+                  <View style={styles.infoContent}>
+                    <Text style={[styles.infoLabel, { color: theme.text.tertiary }]}>Placa</Text>
+                    <Text style={[styles.infoValue, { color: theme.text.secondary }]}>{carInfo.licensePlate}</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <View style={styles.emptyState}>
+                <Text style={[styles.emptyText, { color: theme.text.tertiary }]}>
+                  Adicione as informações do seu veículo para começar a oferecer caronas
+                </Text>
+                <TouchableOpacity
+                  style={[styles.addCarButton, { backgroundColor: theme.interactive.button.secondary }]}
+                  onPress={handleEditCarInfo}
+                >
+                  <Text style={[styles.addCarButtonText, { color: theme.text.primary }]}>Adicionar Veículo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
         
         {/* Theme Toggle for Mobile */}
         {isMobile && (
@@ -246,101 +315,189 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 24,
+    padding: 20,
+    paddingTop: 12,
     ...(Platform.OS === 'web' && {
       alignItems: 'center',
-      justifyContent: 'center',
+      justifyContent: 'flex-start',
     }),
   },
-  profileCard: {
-    borderRadius: 12,
-    width: '100%',
-    maxWidth: 400,
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  infoSection: {
-    marginBottom: 15,
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 5,
-  },
-  value: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  status: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  driverStatus: {
-    fontWeight: 'bold',
-  },
-  carInfoCard: {
-    padding: 15,
-    borderRadius: 8,
-    marginTop: 15,
-    borderLeftWidth: 4,
-  },
-  carInfoHeader: {
+  
+  // Profile Header Styles
+  profileHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+    width: '100%',
+    maxWidth: 600,
   },
-  carInfoTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  avatarContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
   },
-  editButton: {
+  avatarText: {
+    fontSize: 28,
+    fontWeight: '700',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  userBadges: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 4,
   },
-  editButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
+  adminBadge: {
+    // Admin gets highest priority styling
   },
-  carInfoSection: {
+  moderatorBadge: {
+    // Moderator styling
+  },
+  driverBadge: {
+    // Driver styling
+  },
+  passengerBadge: {
+    // Passenger styling
+  },
+  statusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // Card Styles
+  infoCard: {
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 16,
+    width: '100%',
+    maxWidth: 600,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  carInfoLabel: {
-    fontSize: 14,
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: -0.3,
+  },
+  
+  // Info Row Styles
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  infoIcon: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconText: {
+    fontSize: 20,
+  },
+  infoContent: {
+    flex: 1,
+    paddingTop: 2,
+  },
+  infoLabel: {
+    fontSize: 13,
     fontWeight: '500',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  carInfoValue: {
+  infoValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+  },
+  activeStatus: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  
+  // Button Styles
+  editButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  editButtonText: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
   },
+  
+  // Empty State Styles
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 20,
+  },
+  addCarButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  addCarButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  
+  // Theme Toggle
   themeToggleContainer: {
     marginBottom: 20,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 600,
     alignItems: 'center',
   },
+  
+  // Sign Out Button
   signOutButton: {
-    padding: 15,
-    borderRadius: 8,
+    padding: 16,
+    borderRadius: 12,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 600,
     alignItems: 'center',
   },
   signOutButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
+  
+  // Loading
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
+    fontWeight: '500',
   },
 });
 

@@ -79,19 +79,86 @@ const RideCard = ({
     );
   };
 
-  // Renderiza botão de ação baseado no status do usuário
-  const renderActionButton = () => {
-    if (showAdminActions) {
+  // Renderiza botões de ação para admin (Excluir e Solicitar)
+  const renderAdminButtons = () => {
+    // Se for a própria carona do admin, só mostra excluir
+    if (userStatus === 'own') {
       return (
         <TouchableOpacity
-          style={[styles.actionButton, styles.adminButton, { backgroundColor: theme.interactive.button.danger }]}
+          style={[styles.actionButton, styles.adminDeleteButton, { backgroundColor: theme.interactive.button.danger }]}
+          onPress={() => onAdminAction?.(ride.id)}
+        >
+          <Text style={[styles.actionButtonText, { color: theme.text.inverse }]}>
+            🗑️ Excluir Minha Carona
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    // Para caronas de outros usuários, mostra ambos os botões
+    const getRequestButtonConfig = () => {
+      switch (userStatus) {
+        case 'confirmed':
+          return {
+            text: '✅ Confirmado',
+            disabled: true,
+            color: theme.status.available
+          };
+        case 'pending':
+          return {
+            text: '⏳ Aguardando',
+            disabled: true,
+            color: theme.interactive.active
+          };
+        case 'waiting':
+          return {
+            text: '📋 Na Fila',
+            disabled: true,
+            color: theme.status.warning
+          };
+        default:
+          return {
+            text: ride.availableSeats - (ride.passengers?.length || 0) > 0 ? '🚗 Solicitar' : '📋 Entrar na Fila',
+            disabled: false,
+            color: theme.status.available
+          };
+      }
+    };
+
+    const requestConfig = getRequestButtonConfig();
+
+    return (
+      <View style={styles.adminButtonsContainer}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.adminDeleteButton, { backgroundColor: theme.interactive.button.danger }]}
           onPress={() => onAdminAction?.(ride.id)}
         >
           <Text style={[styles.actionButtonText, { color: theme.text.inverse }]}>
             🗑️ Excluir
           </Text>
         </TouchableOpacity>
-      );
+        
+        <TouchableOpacity
+          style={[styles.actionButton, styles.adminRequestButton, { backgroundColor: requestConfig.color }]}
+          onPress={onPress}
+          disabled={requestConfig.disabled || isRequesting}
+        >
+          {isRequesting ? (
+            <ActivityIndicator size="small" color={theme.text.inverse} />
+          ) : (
+            <Text style={[styles.actionButtonText, { color: theme.text.inverse }]}>
+              {requestConfig.text}
+            </Text>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Renderiza botão de ação baseado no status do usuário
+  const renderActionButton = () => {
+    if (showAdminActions) {
+      return renderAdminButtons();
     }
 
     const buttonConfig = {
@@ -343,8 +410,17 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
-  adminButton: {
+  adminButtonsContainer: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  adminDeleteButton: {
+    flex: 1,
     backgroundColor: '#ef4444',
+  },
+  adminRequestButton: {
+    flex: 1,
+    backgroundColor: '#22c55e',
   },
   ownButton: {
     backgroundColor: 'transparent',
