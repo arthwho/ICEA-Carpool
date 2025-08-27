@@ -6,19 +6,24 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { 
   subscribeAvailableRides, 
   deleteRide as dbDeleteRide, 
-  adminConfig,
   requestRide,
-  getUserProfile 
+  getUserProfile,
+  hasPermission,
+  isAdmin 
 } from '../services/firebase';
-import { ResponsiveContainer, MobileContainer, ResponsiveGrid, ResponsiveCard } from '../components/ResponsiveLayout';
+import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
+import RideCard from '../components/RideCard';
+import RideFilters from '../components/RideFilters';
+import { useEntranceAnimation } from '../hooks/useAnimations';
 
 /**
  * Tela para encontrar e visualizar caronas disponíveis
@@ -41,6 +46,10 @@ const FindRideScreen = ({ setScreen, user }) => {
   const [requestingRide, setRequestingRide] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   
+  // Estados para filtros e UI
+  const [filters, setFilters] = useState({});
+  const [filteredRides, setFilteredRides] = useState([]);
+  
   // ========================================
   // HOOKS PARA RESPONSIVIDADE E TEMA
   // ========================================
@@ -48,6 +57,7 @@ const FindRideScreen = ({ setScreen, user }) => {
   const { isMobile } = useResponsive();
   const { showAlert, alertState, closeAlert } = useCustomAlert();
   const { theme } = useTheme();
+  const { scaleAnim, pressAnimation } = useEntranceAnimation();
 
   // ========================================
   // VERIFICAÇÃO DE ADMINISTRADOR
@@ -55,7 +65,7 @@ const FindRideScreen = ({ setScreen, user }) => {
   
   // Verifica se o usuário atual é administrador
   // Administradores podem excluir caronas
-  const isAdmin = user && user.email === adminConfig.email;
+  const userIsAdmin = userProfile && isAdmin(userProfile);
 
   // ========================================
   // LISTENER EM TEMPO REAL PARA CARONAS
@@ -97,6 +107,65 @@ const FindRideScreen = ({ setScreen, user }) => {
 
     loadUserProfile();
   }, [user?.uid]);
+
+  /**
+   * Aplica filtros às caronas sempre que a lista ou filtros mudam
+   */
+  useEffect(() => {
+    const applyFilters = () => {
+      let filtered = [...rides];
+
+      // Filtro de busca por origem
+      if (filters.search && filters.search.trim()) {
+        const searchTerm = filters.search.toLowerCase().trim();
+        filtered = filtered.filter(ride => 
+          ride.origin.toLowerCase().includes(searchTerm) ||
+          ride.driverName.toLowerCase().includes(searchTerm)
+        );
+      }
+
+      // Filtro de preço
+      if (filters.priceRange && filters.priceRange !== 'all') {
+        if (filters.priceRange === 'free') {
+          filtered = filtered.filter(ride => !ride.price || ride.price === 0);
+        } else if (filters.priceRange === 'paid') {
+          filtered = filtered.filter(ride => ride.price && ride.price > 0);
+        }
+      }
+
+      // Filtro de vagas disponíveis
+      if (filters.availableSeats && filters.availableSeats !== 'all') {
+        const minSeats = parseInt(filters.availableSeats);
+        filtered = filtered.filter(ride => {
+          const availableSeats = ride.availableSeats - (ride.passengers?.length || 0);
+          return availableSeats >= minSeats;
+        });
+      }
+
+      // Filtro de horário
+      if (filters.timeRange && filters.timeRange !== 'all') {
+        filtered = filtered.filter(ride => {
+          const time = ride.departureTime;
+          const hour = parseInt(time.split(':')[0]);
+          
+          switch (filters.timeRange) {
+            case 'morning':
+              return hour >= 6 && hour < 12;
+            case 'afternoon':
+              return hour >= 12 && hour < 18;
+            case 'evening':
+              return hour >= 18 || hour < 6;
+            default:
+              return true;
+          }
+        });
+      }
+
+      setFilteredRides(filtered);
+    };
+
+    applyFilters();
+  }, [rides, filters]);
 
   // ========================================
   // FUNÇÕES DE GESTÃO DE CARONAS
@@ -202,7 +271,27 @@ const FindRideScreen = ({ setScreen, user }) => {
   };
 
   // ========================================
-  // RENDERIZAÇÃO
+  // FUNÇÕES AUXILIARES PARA RENDERIZAÇÃO
+  // ========================================
+  
+  /**
+   * Determina o status do usuário para uma carona específica
+   */
+  const getUserStatusForRide = (ride) => {
+    if (ride.driverId === user?.uid) return 'own';
+    
+    const hasRequested = ride.pendingRequests?.some(req => req.passengerId === user?.uid);
+    const isConfirmed = ride.passengers?.some(p => p.passengerId === user?.uid);
+    const isWaiting = ride.waitingList?.some(w => w.passengerId === user?.uid);
+    
+    if (isConfirmed) return 'confirmed';
+    if (hasRequested) return 'pending';
+    if (isWaiting) return 'waiting';
+    return 'available';
+  };
+
+  // ========================================
+  // RENDERIZAÇÃO PRINCIPAL
   // ========================================
   
   // Escolhe o container baseado na plataforma (mobile ou web)
@@ -230,154 +319,73 @@ const FindRideScreen = ({ setScreen, user }) => {
         onClose={closeAlert}
       />
       
-      {/* Lista de caronas */}
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {rides.length > 0 ? (
-          // Grid responsivo para exibir as caronas
-          <ResponsiveGrid>
-            {rides.map((item) => (
-              <ResponsiveCard key={item.id} style={[styles.rideCard, { backgroundColor: theme.surface.elevated }]}>
-                {/* Informações da carona */}
-                <Text style={[styles.rideTitle, { color: theme.text.primary }]}>{item.origin} para {item.destination}</Text>
-                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
-                  <Text style={[styles.bold, { color: theme.text.primary }]}>Motorista:</Text> {item.driverName}
-                </Text>
-                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
-                  <Text style={[styles.bold, { color: theme.text.primary }]}>Horário:</Text> {item.departureTime}
-                </Text>
-                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
-                  <Text style={[styles.bold, { color: theme.text.primary }]}>Vagas:</Text> {item.availableSeats}
-                </Text>
-                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
-                  <Text style={[styles.bold, { color: theme.text.primary }]}>Preço:</Text> 
-                  {!item.price || item.price === 0 ? (
-                    <Text style={[styles.freeRide, { color: theme.status.available }]}> Gratuito</Text>
-                  ) : (
-                    <Text style={[styles.priceText, { color: theme.text.primary }]}> R$ {Number(item.price).toFixed(2).replace('.', ',')}</Text>
-                  )}
-                </Text>
-                
-                {/* Display car information if available */}
-                {item.carInfo && (
-                  <View style={[styles.carInfoSection, { 
-                    backgroundColor: theme.interactive.active + '1A',
-                    borderLeftColor: theme.interactive.active 
-                  }]}>
-                    <Text style={[styles.carInfoTitle, { color: theme.interactive.active }]}>Veículo:</Text>
-                    <Text style={[styles.carInfoText, { color: theme.text.secondary }]}>
-                      {item.carInfo.model} - {item.carInfo.color}
-                    </Text>
-                    <Text style={[styles.carInfoText, { color: theme.text.secondary }]}>
-                      Placa: {item.carInfo.licensePlate}
-                    </Text>
-                  </View>
-                )}
+      {/* Container principal com padding responsivo */}
+      <View style={styles.contentContainer}>
+        
 
-                {/* Status da carona */}
-                <View style={styles.statusContainer}>
-                  {/* Vagas ocupadas e disponíveis */}
-                  <View style={styles.seatsInfo}>
-                    <Text style={[styles.seatsText, { color: theme.text.tertiary }]}>
-                      Vagas: {item.availableSeats - (item.passengers?.length || 0)}/{item.availableSeats} disponíveis
-                    </Text>
-                    {item.pendingRequests && item.pendingRequests.length > 0 && (
-                      <Text style={[styles.pendingText, { color: theme.interactive.active }]}>
-                        {item.pendingRequests.length} pedido(s) pendente(s)
-                      </Text>
-                    )}
-                    {item.waitingList && item.waitingList.length > 0 && (
-                      <Text style={[styles.waitingText, { color: theme.text.secondary }]}>
-                        {item.waitingList.length} na lista de espera
-                      </Text>
-                    )}
-                  </View>
-                </View>
-                
-                {/* Botões de ação */}
-                {isAdmin ? (
-                  <TouchableOpacity
-                    style={[styles.deleteButton, { backgroundColor: theme.interactive.button.danger }]}
-                    onPress={() => handleDeleteRide(item.id)}
-                  >
-                    <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Excluir Carona</Text>
-                  </TouchableOpacity>
-                ) : item.driverId === user?.uid ? (
-                  <TouchableOpacity 
-                    style={[styles.ownRideButton, { backgroundColor: theme.surface.secondary, borderColor: theme.interactive.active }]}
-                    disabled
-                  >
-                    <Text style={[styles.buttonText, { color: theme.text.tertiary }]}>Sua Carona</Text>
-                  </TouchableOpacity>
-                ) : (
-                  (() => {
-                    // Verifica o status do usuário nesta carona
-                    const hasRequested = item.pendingRequests?.some(req => req.passengerId === user?.uid);
-                    const isConfirmed = item.passengers?.some(p => p.passengerId === user?.uid);
-                    const isWaiting = item.waitingList?.some(w => w.passengerId === user?.uid);
-                    const isRequesting = requestingRide === item.id;
-                    
-                    if (isConfirmed) {
-                      return (
-                        <TouchableOpacity 
-                          style={[styles.confirmedButton, { backgroundColor: theme.status.available }]}
-                          disabled
-                        >
-                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>✓ Confirmado</Text>
-                        </TouchableOpacity>
-                      );
-                    }
-                    
-                    if (hasRequested) {
-                      return (
-                        <TouchableOpacity 
-                          style={[styles.pendingButton, { backgroundColor: theme.interactive.active, opacity: 0.7 }]}
-                          disabled
-                        >
-                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Aguardando Aprovação</Text>
-                        </TouchableOpacity>
-                      );
-                    }
-                    
-                    if (isWaiting) {
-                      return (
-                        <TouchableOpacity 
-                          style={[styles.waitingButton, { backgroundColor: theme.text.secondary, opacity: 0.7 }]}
-                          disabled
-                        >
-                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>Na Lista de Espera</Text>
-                        </TouchableOpacity>
-                      );
-                    }
-                    
-                    return (
-                      <TouchableOpacity 
-                        style={[styles.bookButton, { 
-                          backgroundColor: isRequesting ? theme.text.secondary : theme.status.available 
-                        }]}
-                        onPress={() => handleRequestRide(item.id)}
-                        disabled={isRequesting}
-                      >
-                        {isRequesting ? (
-                          <ActivityIndicator size="small" color={theme.text.inverse} />
-                        ) : (
-                          <Text style={[styles.buttonText, { color: theme.text.inverse }]}>
-                            {(item.passengers?.length || 0) >= item.availableSeats ? 'Entrar na Lista de Espera' : 'Solicitar Reserva'}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })()
-                )}
-              </ResponsiveCard>
-            ))}
-          </ResponsiveGrid>
-        ) : (
-          <Text style={[styles.noRidesText, { color: theme.text.tertiary }]}>Nenhuma carona disponível no momento.</Text>
-        )}
-      </ScrollView>
+        {/* Filtros */}
+        <RideFilters
+          onFiltersChange={setFilters}
+          ridesCount={filteredRides.length}
+          initialFilters={filters}
+        />
+
+        {/* Lista de caronas */}
+        <ScrollView 
+          style={styles.scrollContainer}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {filteredRides.length > 0 ? (
+            <>
+              {filteredRides.map((ride) => (
+                <RideCard
+                  key={ride.id}
+                  ride={ride}
+                  userStatus={getUserStatusForRide(ride)}
+                  isRequesting={requestingRide === ride.id}
+                  showAdminActions={userIsAdmin}
+                  onPress={() => handleRequestRide(ride.id)}
+                  onAdminAction={handleDeleteRide}
+                />
+              ))}
+            </>
+          ) : rides.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyStateIcon, { color: theme.text.tertiary }]}>🚗</Text>
+              <Text style={[styles.emptyStateTitle, { color: theme.text.primary }]}>
+                Nenhuma carona disponível
+              </Text>
+              <Text style={[styles.emptyStateText, { color: theme.text.tertiary }]}>
+                Seja o primeiro a oferecer uma carona!
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyStateIcon, { color: theme.text.tertiary }]}>🔍</Text>
+              <Text style={[styles.emptyStateTitle, { color: theme.text.primary }]}>
+                Nenhuma carona encontrada
+              </Text>
+              <Text style={[styles.emptyStateText, { color: theme.text.tertiary }]}>
+                Tente ajustar seus filtros de busca
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+        
+        {/* Floating Action Button para Oferecer Carona */}
+        <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
+          <TouchableOpacity
+            style={[styles.fab, { backgroundColor: theme.interactive.active }]}
+            onPress={() => {
+              pressAnimation(() => setScreen('OfferRide'));
+            }}
+            activeOpacity={0.9}
+          >
+            <Text style={[styles.fabText, { color: theme.text.inverse }]}>+</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
     </Container>
   );
 };
@@ -386,131 +394,67 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-    padding: 24,
-    paddingBottom: 64,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
+    fontWeight: '500',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 12,
   },
-  rideCard: {
-    padding: 20,
-    borderRadius: 10,
-    marginBottom: 15,
-    width: '100%',
+  scrollContainer: {
+    flex: 1,
   },
-  rideTitle: {
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+  },
+  emptyStateIcon: {
+    fontSize: 64,
+    marginBottom: 16,
+    opacity: 0.5,
+  },
+  emptyStateTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  rideDetail: {
-    fontSize: 16,
-    marginBottom: 5,
-  },
-  bold: {
-    fontWeight: 'bold',
-  },
-  freeRide: {
-    fontWeight: 'bold',
-  },
-  priceText: {
-    fontWeight: 'bold',
-  },
-  carInfoSection: {
-    padding: 10,
-    borderRadius: 6,
-    marginTop: 10,
-    marginBottom: 10,
-    borderLeftWidth: 3,
-  },
-  carInfoTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    marginBottom: 5,
-  },
-  carInfoText: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  statusContainer: {
-    marginTop: 10,
-    marginBottom: 10,
-  },
-  seatsInfo: {
-    marginBottom: 5,
-  },
-  seatsText: {
-    fontSize: 14,
-    marginBottom: 2,
-  },
-  pendingText: {
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginBottom: 2,
-  },
-  waitingText: {
-    fontSize: 12,
-    fontStyle: 'italic',
-  },
-  bookButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  deleteButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  ownRideButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-    borderWidth: 1,
-  },
-  confirmedButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  pendingButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  waitingButton: {
-    padding: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  noRidesText: {
-    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
     textAlign: 'center',
-    marginTop: 50,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 80,
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  fabText: {
+    fontSize: 24,
+    fontWeight: '300',
   },
 });
 

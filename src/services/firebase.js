@@ -22,11 +22,77 @@ import {
   deleteDoc,
   updateDoc,
   query,
-  where
+  where,
+  limit
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { firebaseConfig, googleConfig, adminConfig } from '../config/firebase-config';
+
+// ========================================
+// SISTEMA DE ROLES E PERMISSÕES
+// ========================================
+
+/**
+ * Define os tipos de usuário e suas permissões
+ */
+const USER_ROLES = {
+  ADMIN: 'admin',
+  MODERATOR: 'moderator', 
+  USER: 'user'
+};
+
+/**
+ * Define permissões por role
+ */
+const PERMISSIONS = {
+  // Permissões de administrador
+  ADMIN: [
+    'rides:delete:any',      // Excluir qualquer carona
+    'rides:edit:any',        // Editar qualquer carona
+    'users:view:all',        // Ver todos os usuários
+    'users:edit:any',        // Editar qualquer usuário
+    'users:ban',             // Banir usuários
+    'reports:view:all',      // Ver todos os relatórios
+    'analytics:view',        // Ver analytics
+    'system:manage'          // Gerenciar sistema
+  ],
+  
+  // Permissões de moderador
+  MODERATOR: [
+    'rides:delete:reported',  // Excluir caronas reportadas
+    'rides:moderate',        // Moderar caronas
+    'users:warn',           // Advertir usuários
+    'reports:view:assigned', // Ver relatórios atribuídos
+    'disputes:resolve'       // Resolver disputas
+  ],
+  
+  // Permissões de usuário normal
+  USER: [
+    'rides:create',          // Criar caronas
+    'rides:edit:own',        // Editar próprias caronas
+    'rides:delete:own',      // Excluir próprias caronas
+    'reservations:manage',   // Gerenciar reservas
+    'profile:edit:own'       // Editar próprio perfil
+  ]
+};
+
+/**
+ * Retorna as permissões padrão para um role
+ * @param {string} role - Role do usuário
+ * @returns {Array} Lista de permissões
+ */
+const getDefaultPermissions = (role) => {
+  switch (role) {
+    case USER_ROLES.ADMIN:
+      return [...PERMISSIONS.ADMIN, ...PERMISSIONS.MODERATOR, ...PERMISSIONS.USER];
+    case USER_ROLES.MODERATOR:
+      return [...PERMISSIONS.MODERATOR, ...PERMISSIONS.USER];
+    case USER_ROLES.USER:
+    default:
+      return PERMISSIONS.USER;
+  }
+};
 import * as AuthSession from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
@@ -105,11 +171,14 @@ export const setUserProfile = async (userId, profileData) => {
   // Cria uma referência para o documento do usuário
   const userRef = doc(db, 'users', userId);
   
-  // Salva os dados no Firestore com timestamps
+  // Salva os dados no Firestore com timestamps e role padrão
   await setDoc(userRef, {
     ...profileData,
-    createdAt: new Date(), // Data de criação
-    updatedAt: new Date()  // Data da última atualização
+    role: profileData.role || 'user', // Default: usuário normal
+    permissions: getDefaultPermissions(profileData.role || 'user'),
+    isDriver: profileData.isDriver || false,
+    createdAt: new Date(),
+    updatedAt: new Date()
   });
 };
 
@@ -652,6 +721,241 @@ export const subscribeUserRideHistory = (userId, callback) => {
 };
 
 // ========================================
+// FUNÇÕES DE GERENCIAMENTO DE ROLES
+// ========================================
+
+/**
+ * Verifica se um usuário tem uma permissão específica
+ * @param {Object} user - Dados do usuário
+ * @param {string} permission - Permissão a verificar
+ * @returns {boolean} Se o usuário tem a permissão
+ */
+const hasPermission = (user, permission) => {
+  if (!user || !user.permissions) return false;
+  
+  // Admin sempre tem todas as permissões
+  if (user.role === USER_ROLES.ADMIN) return true;
+  
+  return user.permissions.includes(permission);
+};
+
+/**
+ * Verifica se um usuário é administrador
+ * @param {Object} user - Dados do usuário
+ * @returns {boolean} Se é admin
+ */
+const isAdmin = (user) => {
+  return user && user.role === USER_ROLES.ADMIN;
+};
+
+/**
+ * Verifica se um usuário é moderador ou admin
+ * @param {Object} user - Dados do usuário
+ * @returns {boolean} Se é moderador ou admin
+ */
+const isModerator = (user) => {
+  return user && (user.role === USER_ROLES.ADMIN || user.role === USER_ROLES.MODERATOR);
+};
+
+/**
+ * Promove um usuário para administrador (só admins podem fazer isso)
+ * @param {string} adminUserId - ID do admin que está promovendo
+ * @param {string} targetUserId - ID do usuário a ser promovido
+ */
+export const promoteToAdmin = async (adminUserId, targetUserId) => {
+  // Verifica se quem está promovendo é admin
+  const adminProfile = await getUserProfile(adminUserId);
+  if (!isAdmin(adminProfile)) {
+    throw new Error('Apenas administradores podem promover outros usuários');
+  }
+  
+  const userRef = doc(db, 'users', targetUserId);
+  await updateDoc(userRef, {
+    role: USER_ROLES.ADMIN,
+    permissions: getDefaultPermissions(USER_ROLES.ADMIN),
+    promotedAt: new Date(),
+    promotedBy: adminUserId,
+    updatedAt: new Date()
+  });
+  
+  // Log da ação administrativa
+  await logAdminAction(adminUserId, 'PROMOTE_USER', {
+    targetUserId,
+    newRole: USER_ROLES.ADMIN
+  });
+};
+
+/**
+ * Remove privilégios administrativos de um usuário
+ * @param {string} adminUserId - ID do admin que está removendo
+ * @param {string} targetUserId - ID do usuário a perder privilégios
+ */
+export const demoteUser = async (adminUserId, targetUserId) => {
+  // Verifica se quem está removendo é admin
+  const adminProfile = await getUserProfile(adminUserId);
+  if (!isAdmin(adminProfile)) {
+    throw new Error('Apenas administradores podem remover privilégios');
+  }
+  
+  // Não pode remover privilégios de si mesmo
+  if (adminUserId === targetUserId) {
+    throw new Error('Você não pode remover seus próprios privilégios');
+  }
+  
+  const userRef = doc(db, 'users', targetUserId);
+  await updateDoc(userRef, {
+    role: USER_ROLES.USER,
+    permissions: getDefaultPermissions(USER_ROLES.USER),
+    demotedAt: new Date(),
+    demotedBy: adminUserId,
+    updatedAt: new Date()
+  });
+  
+  // Log da ação administrativa
+  await logAdminAction(adminUserId, 'DEMOTE_USER', {
+    targetUserId,
+    newRole: USER_ROLES.USER
+  });
+};
+
+/**
+ * Bane um usuário do sistema
+ * @param {string} adminUserId - ID do admin que está banindo
+ * @param {string} targetUserId - ID do usuário a ser banido
+ * @param {string} reason - Motivo do banimento
+ */
+export const banUser = async (adminUserId, targetUserId, reason) => {
+  // Verifica permissão
+  const adminProfile = await getUserProfile(adminUserId);
+  if (!hasPermission(adminProfile, 'users:ban')) {
+    throw new Error('Você não tem permissão para banir usuários');
+  }
+  
+  const userRef = doc(db, 'users', targetUserId);
+  await updateDoc(userRef, {
+    banned: true,
+    bannedAt: new Date(),
+    bannedBy: adminUserId,
+    banReason: reason,
+    updatedAt: new Date()
+  });
+  
+  // Log da ação administrativa
+  await logAdminAction(adminUserId, 'BAN_USER', {
+    targetUserId,
+    reason
+  });
+};
+
+/**
+ * Remove o banimento de um usuário
+ * @param {string} adminUserId - ID do admin
+ * @param {string} targetUserId - ID do usuário
+ */
+export const unbanUser = async (adminUserId, targetUserId) => {
+  // Verifica permissão
+  const adminProfile = await getUserProfile(adminUserId);
+  if (!hasPermission(adminProfile, 'users:ban')) {
+    throw new Error('Você não tem permissão para desbanir usuários');
+  }
+  
+  const userRef = doc(db, 'users', targetUserId);
+  await updateDoc(userRef, {
+    banned: false,
+    unbannedAt: new Date(),
+    unbannedBy: adminUserId,
+    banReason: null,
+    updatedAt: new Date()
+  });
+  
+  // Log da ação administrativa
+  await logAdminAction(adminUserId, 'UNBAN_USER', {
+    targetUserId
+  });
+};
+
+/**
+ * Registra ações administrativas para auditoria
+ * @param {string} adminUserId - ID do admin
+ * @param {string} action - Ação realizada
+ * @param {Object} details - Detalhes da ação
+ */
+export const logAdminAction = async (adminUserId, action, details = {}) => {
+  const adminLogsRef = collection(db, 'adminLogs');
+  
+  await addDoc(adminLogsRef, {
+    adminUserId,
+    action,
+    details,
+    timestamp: new Date(),
+    ipAddress: 'unknown', // Pode ser implementado
+    userAgent: 'unknown'  // Pode ser implementado
+  });
+};
+
+/**
+ * Busca logs administrativos (apenas para admins)
+ * @param {string} adminUserId - ID do admin consultando
+ * @param {number} limit - Limite de registros
+ * @returns {Promise<Array>} Lista de logs
+ */
+export const getAdminLogs = async (adminUserId, limit = 50) => {
+  // Verifica se é admin
+  const adminProfile = await getUserProfile(adminUserId);
+  if (!isAdmin(adminProfile)) {
+    throw new Error('Apenas administradores podem visualizar logs');
+  }
+  
+  const logsRef = collection(db, 'adminLogs');
+  const q = query(logsRef, limit(limit));
+  
+  const snapshot = await getDocs(q);
+  const logs = [];
+  
+  snapshot.forEach((doc) => {
+    logs.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  return logs.sort((a, b) => b.timestamp - a.timestamp);
+};
+
+/**
+ * Busca todos os usuários (apenas para admins e moderadores)
+ * @param {string} requesterUserId - ID de quem está consultando
+ * @returns {Promise<Array>} Lista de usuários
+ */
+export const getAllUsers = async (requesterUserId) => {
+  // Verifica permissão
+  const requesterProfile = await getUserProfile(requesterUserId);
+  if (!hasPermission(requesterProfile, 'users:view:all')) {
+    throw new Error('Você não tem permissão para visualizar todos os usuários');
+  }
+  
+  const usersRef = collection(db, 'users');
+  const snapshot = await getDocs(usersRef);
+  
+  const users = [];
+  snapshot.forEach((doc) => {
+    const userData = doc.data();
+    // Remove informações sensíveis para moderadores
+    if (!isAdmin(requesterProfile)) {
+      delete userData.email;
+      delete userData.phone;
+    }
+    
+    users.push({
+      id: doc.id,
+      ...userData
+    });
+  });
+  
+  return users;
+};
+
+// ========================================
 // FUNÇÕES DE LOGIN COM GOOGLE
 // ========================================
 
@@ -725,6 +1029,14 @@ export const getRedirectUri = () => {
 // CONFIGURAÇÕES DE ADMINISTRADOR
 // ========================================
 
-// Exporta as configurações de administrador
-export { adminConfig };
+// Exporta as configurações de administrador e funções de roles
+export { 
+  adminConfig, 
+  USER_ROLES, 
+  PERMISSIONS, 
+  getDefaultPermissions,
+  hasPermission, 
+  isAdmin, 
+  isModerator 
+};
 

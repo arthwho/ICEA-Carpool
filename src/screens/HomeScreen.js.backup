@@ -7,11 +7,13 @@ import {
 } from 'react-native';
 import { ResponsiveContainer, ResponsiveGrid, ResponsiveCard, MobileContainer } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
+import { isAdmin } from '../services/firebase';
 
-const HomeScreen = ({ setScreen }) => {
+const HomeScreen = ({ setScreen, user }) => {
   const { isWeb, isMobile, getResponsiveValue } = useResponsive();
 
-  const menuItems = [
+  // Menu items baseado no tipo de usuário
+  const baseMenuItems = [
     {
       title: 'Oferecer Carona',
       description: 'Publique uma carona para outros usuários',
@@ -43,6 +45,20 @@ const HomeScreen = ({ setScreen }) => {
       color: '#ed8936',
     },
   ];
+
+  // Adiciona painel admin se o usuário for administrador
+  const menuItems = user && isAdmin(user) 
+    ? [
+        ...baseMenuItems.slice(0, -1), // Todos os itens exceto o último (Perfil)
+        {
+          title: 'Painel Administrativo',
+          description: 'Gerencie usuários e sistema',
+          onPress: () => setScreen('AdminPanel'),
+          color: '#e53e3e',
+        },
+        baseMenuItems[baseMenuItems.length - 1] // Adiciona Perfil por último
+      ]
+    : baseMenuItems;
 
   const renderMenuItem = (item, index) => (
     <ResponsiveCard key={index} style={styles.menuItem}>

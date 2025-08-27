@@ -4,7 +4,6 @@ import { View, StyleSheet } from 'react-native';
 
 // Importação das telas da aplicação
 import AuthScreen from './src/screens/AuthScreen';
-import HomeScreen from './src/screens/HomeScreen';
 import OfferRideScreen from './src/screens/OfferRideScreen';
 import FindRideScreen from './src/screens/FindRideScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
@@ -14,9 +13,11 @@ import Header from './src/components/Header';
 import BottomNavigation from './src/components/BottomNavigation';
 import SidebarNavigation from './src/components/SidebarNavigation';
 import PassengerManagement from './src/components/PassengerManagement';
+import AdminPanel from './src/components/AdminPanel';
 
 // Importação dos serviços Firebase
 import { onAuthChanged } from './src/services/firebase';
+import { autoSetupAdminOnLogin } from './src/utils/setupAdmin';
 
 // Importação do sistema de temas
 import { ThemeProvider, useTheme } from './src/hooks/useTheme';
@@ -51,11 +52,26 @@ function AppContent() {
   // É executado sempre que o usuário faz login ou logout
   useEffect(() => {
     // Configura o listener do Firebase Auth
-    const unsubscribe = onAuthChanged((currentUser) => {
+    const unsubscribe = onAuthChanged(async (currentUser) => {
       if (currentUser) {
-        // Se há um usuário logado
-        setUser(currentUser);
-        setScreen('Home'); // Redireciona para a tela principal
+        try {
+          // Se há um usuário logado, verifica/configura admin se necessário
+          const userProfile = await autoSetupAdminOnLogin(currentUser);
+          
+          // Adiciona os dados do perfil ao objeto de usuário
+          const userWithProfile = {
+            ...currentUser,
+            ...userProfile
+          };
+          
+          setUser(userWithProfile);
+          setScreen('Home'); // Redireciona para a tela principal
+        } catch (error) {
+          console.error('Error during admin setup:', error);
+          // Em caso de erro, ainda define o usuário básico
+          setUser(currentUser);
+          setScreen('Home');
+        }
       } else {
         // Se não há usuário logado
         setUser(null);
@@ -101,7 +117,7 @@ function AppContent() {
         return <OfferRideScreen setScreen={setScreen} user={user} />;
         
       case 'FindRide':
-        // Tela para encontrar caronas (mesma da Home)
+        // Tela para encontrar caronas (mesmo conteúdo da Home)
         return <FindRideScreen setScreen={setScreen} user={user} />;
         
       case 'Profile':
@@ -118,6 +134,10 @@ function AppContent() {
       case 'ManagePassengers':
         // Componente de gestão de passageiros
         return <PassengerManagement user={user} />;
+
+      case 'AdminPanel':
+        // Painel administrativo
+        return <AdminPanel user={user} />;
         
       default:
         // Fallback para tela de autenticação

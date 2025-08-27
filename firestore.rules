@@ -1,0 +1,220 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // =================================================
+    // FUNÇÕES AUXILIARES PARA VERIFICAÇÃO DE PERMISSÕES
+    // =================================================
+    
+    // Verifica se o usuário está autenticado
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Verifica se é o próprio usuário
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Busca dados do usuário atual
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Verifica se o usuário é admin
+    function isAdmin() {
+      return isAuthenticated() && getUserData().role == 'admin';
+    }
+    
+    // Verifica se o usuário é moderador ou admin
+    function isModerator() {
+      return isAuthenticated() && getUserData().role in ['admin', 'moderator'];
+    }
+    
+    // Verifica se o usuário tem uma permissão específica
+    function hasPermission(permission) {
+      return isAuthenticated() && 
+             getUserData().permissions != null && 
+             permission in getUserData().permissions;
+    }
+    
+    // Verifica se o usuário não está banido
+    function isNotBanned() {
+      return !getUserData().get('banned', false);
+    }
+
+    // =================================================
+    // REGRAS PARA COLEÇÃO USERS
+    // =================================================
+    
+    match /users/{userId} {
+      // Leitura: usuário pode ler próprio perfil, admin/moderador podem ler todos
+      allow read: if isOwner(userId) || isModerator();
+      
+      // Criação: apenas o próprio usuário pode criar seu perfil
+      allow create: if isOwner(userId) && 
+                       isAuthenticated() &&
+                       // Não pode definir role admin na criação
+                       (!('role' in resource.data) || resource.data.role == 'user') &&
+                       // Campos obrigatórios
+                       'email' in resource.data &&
+                       'createdAt' in resource.data;
+      
+      // Atualização: próprio usuário ou admin
+      allow update: if (isOwner(userId) && 
+                          // Usuário não pode alterar próprio role/permissions/banned
+                          !('role' in resource.data.diff(resource.data)) &&
+                          !('permissions' in resource.data.diff(resource.data)) &&
+                          !('banned' in resource.data.diff(resource.data)) &&
+                          isNotBanned()) ||
+                       // Admins podem alterar qualquer coisa, exceto próprio role
+                       (isAdmin() && 
+                          (userId != request.auth.uid || 
+                           !('role' in resource.data.diff(resource.data))));
+      
+      // Exclusão: apenas admin pode excluir usuários
+      allow delete: if isAdmin() && userId != request.auth.uid;
+      
+      // Subcoleção de informações do carro
+      match /car/info {
+        allow read, write: if isOwner(userId) && isNotBanned();
+      }
+    }
+
+    // =================================================
+    // REGRAS PARA COLEÇÃO RIDES
+    // =================================================
+    
+    match /rides/{rideId} {
+      // Leitura: qualquer usuário autenticado pode ler caronas disponíveis
+      allow read: if isAuthenticated() && isNotBanned();
+      
+      // Criação: usuários autenticados podem criar caronas
+      allow create: if isAuthenticated() && 
+                       isNotBanned() &&
+                       // Deve ser o motorista da carona
+                       resource.data.driverId == request.auth.uid &&
+                       // Campos obrigatórios
+                       'origin' in resource.data &&
+                       'destination' in resource.data &&
+                       'departureTime' in resource.data &&
+                       'availableSeats' in resource.data &&
+                       'status' in resource.data &&
+                       resource.data.status == 'available' &&
+                       'createdAt' in resource.data;
+      
+      // Atualização: motorista da carona ou admin
+      allow update: if (isAuthenticated() && 
+                          isNotBanned() &&
+                          resource.data.driverId == request.auth.uid) ||
+                       hasPermission('rides:edit:any');
+      
+      // Exclusão: motorista da carona, admin ou quem tem permissão
+      allow delete: if (isAuthenticated() && 
+                          resource.data.driverId == request.auth.uid) ||
+                       hasPermission('rides:delete:any') ||
+                       hasPermission('rides:delete:own');
+    }
+
+    // =================================================
+    // REGRAS PARA COLEÇÃO RESERVATIONS
+    // =================================================
+    
+    match /reservations/{reservationId} {
+      // Leitura: passageiro da reserva, motorista da carona ou admin
+      allow read: if isAuthenticated() && 
+                     isNotBanned() &&
+                     (resource.data.passengerId == request.auth.uid ||
+                      get(/databases/$(database)/documents/rides/$(resource.data.rideId)).data.driverId == request.auth.uid ||
+                      isModerator());
+      
+      // Criação: apenas o próprio passageiro pode criar reserva
+      allow create: if isAuthenticated() && 
+                       isNotBanned() &&
+                       resource.data.passengerId == request.auth.uid &&
+                       'rideId' in resource.data &&
+                       'status' in resource.data &&
+                       resource.data.status == 'pending';
+      
+      // Atualização: passageiro pode cancelar, motorista pode aprovar/rejeitar
+      allow update: if isAuthenticated() && 
+                       isNotBanned() &&
+                       ((resource.data.passengerId == request.auth.uid && 
+                         request.resource.data.status == 'cancelled') ||
+                        (get(/databases/$(database)/documents/rides/$(resource.data.rideId)).data.driverId == request.auth.uid &&
+                         request.resource.data.status in ['accepted', 'rejected']));
+      
+      // Exclusão: admin ou moderador apenas
+      allow delete: if isModerator();
+    }
+
+    // =================================================
+    // REGRAS PARA COLEÇÃO RIDEHISTORY
+    // =================================================
+    
+    match /rideHistory/{historyId} {
+      // Leitura: próprio usuário ou admin
+      allow read: if isAuthenticated() && 
+                     isNotBanned() &&
+                     (resource.data.userId == request.auth.uid || isAdmin());
+      
+      // Criação: apenas sistema (através de cloud functions idealmente)
+      // Por enquanto, permitir para usuários com permissão específica
+      allow create: if hasPermission('system:manage') ||
+                       // Permitir que motorista crie histórico de carona finalizada
+                       (isAuthenticated() && 
+                        isNotBanned() &&
+                        resource.data.userId == request.auth.uid);
+      
+      // Atualização e exclusão: apenas admin
+      allow update, delete: if isAdmin();
+    }
+
+    // =================================================
+    // REGRAS PARA LOGS ADMINISTRATIVOS
+    // =================================================
+    
+    match /adminLogs/{logId} {
+      // Leitura: apenas admin
+      allow read: if isAdmin();
+      
+      // Criação: admin ou sistema
+      allow create: if isAdmin() && 
+                       resource.data.adminUserId == request.auth.uid;
+      
+      // Atualização e exclusão: nunca (logs são imutáveis)
+      allow update, delete: if false;
+    }
+
+    // =================================================
+    // REGRAS PARA OUTRAS COLEÇÕES
+    // =================================================
+    
+    // Relatórios e denúncias (funcionalidade futura)
+    match /reports/{reportId} {
+      allow read: if isModerator();
+      allow create: if isAuthenticated() && isNotBanned();
+      allow update: if isModerator();
+      allow delete: if isAdmin();
+    }
+    
+    // Notificações (funcionalidade futura)
+    match /notifications/{notificationId} {
+      allow read, update: if isAuthenticated() && 
+                             resource.data.userId == request.auth.uid;
+      allow create: if hasPermission('system:manage');
+      allow delete: if isOwner(resource.data.userId) || isAdmin();
+    }
+    
+    // Configurações do sistema (apenas admin)
+    match /systemConfig/{configId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    
+    // Por padrão, negar acesso a qualquer outra coleção
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

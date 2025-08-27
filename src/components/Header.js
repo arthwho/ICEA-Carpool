@@ -22,6 +22,12 @@ const Header = ({ currentScreen, user }) => {
         return 'Caronas Disponíveis';
       case 'Profile':
         return 'Meu Perfil';
+      case 'ManagePassengers':
+        return 'Gerenciar Passageiros';
+      case 'RideHistory':
+        return 'Histórico de Caronas';
+      case 'AdminPanel':
+        return 'Painel Administrativo';
       default:
         return 'ICEA Caronas';
     }
