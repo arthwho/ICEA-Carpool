@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,11 +10,25 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
-const CarInfoModal = ({ visible, onClose, onSave, loading }) => {
+const CarInfoModal = ({ visible, onClose, onSave, loading, initialValues = null, isEditing = false }) => {
   const [carModel, setCarModel] = useState('');
   const [licensePlate, setLicensePlate] = useState('');
   const [carColor, setCarColor] = useState('');
   const { theme } = useTheme();
+
+  // Load initial values when modal opens or when initialValues change
+  useEffect(() => {
+    if (initialValues) {
+      setCarModel(initialValues.model || '');
+      setLicensePlate(initialValues.licensePlate || '');
+      setCarColor(initialValues.color || '');
+    } else {
+      // Reset form when no initial values (creating new)
+      setCarModel('');
+      setLicensePlate('');
+      setCarColor('');
+    }
+  }, [initialValues, visible]);
 
   const handleSave = () => {
     if (!carModel.trim() || !licensePlate.trim() || !carColor.trim()) {
@@ -41,6 +55,20 @@ const CarInfoModal = ({ visible, onClose, onSave, loading }) => {
     onClose();
   };
 
+  const getTitle = () => {
+    return isEditing ? 'Editar Informações do Veículo' : 'Informações do Veículo';
+  };
+
+  const getSubtitle = () => {
+    return isEditing 
+      ? 'Atualize as informações do seu veículo'
+      : 'Para oferecer caronas, precisamos das informações do seu veículo';
+  };
+
+  const getSaveButtonText = () => {
+    return isEditing ? 'Atualizar' : 'Salvar';
+  };
+
   return (
     <Modal
       visible={visible}
@@ -53,9 +81,9 @@ const CarInfoModal = ({ visible, onClose, onSave, loading }) => {
           backgroundColor: theme.background.modal,
           borderColor: theme.border.primary
         }]}>
-          <Text style={[styles.title, { color: theme.text.primary }]}>Informações do Veículo</Text>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{getTitle()}</Text>
           <Text style={[styles.subtitle, { color: theme.text.tertiary }]}>
-            Para oferecer caronas, precisamos das informações do seu veículo
+            {getSubtitle()}
           </Text>
 
           <TextInput
@@ -82,7 +110,7 @@ const CarInfoModal = ({ visible, onClose, onSave, loading }) => {
             value={licensePlate}
             onChangeText={setLicensePlate}
             autoCapitalize="characters"
-            maxLength={8}
+            maxLength={7}
           />
 
           <TextInput
@@ -119,7 +147,7 @@ const CarInfoModal = ({ visible, onClose, onSave, loading }) => {
               {loading ? (
                 <ActivityIndicator color={theme.text.inverse} size="small" />
               ) : (
-                <Text style={[styles.saveButtonText, { color: theme.text.inverse }]}>Salvar</Text>
+                <Text style={[styles.saveButtonText, { color: theme.text.inverse }]}>{getSaveButtonText()}</Text>
               )}
             </TouchableOpacity>
           </View>

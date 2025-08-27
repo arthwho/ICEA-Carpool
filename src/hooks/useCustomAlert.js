@@ -24,7 +24,17 @@ export const useCustomAlert = () => {
       });
     } else {
       // Use native Alert for mobile
-      Alert.alert(title, message, buttons);
+      // Convert buttons array to native Alert format
+      let nativeButtons = null;
+      if (buttons && buttons.length > 0) {
+        nativeButtons = buttons.map(button => ({
+          text: button.text,
+          onPress: button.onPress,
+          style: button.style === 'destructive' ? 'destructive' : 
+                 button.style === 'cancel' ? 'cancel' : 'default'
+        }));
+      }
+      Alert.alert(title, message, nativeButtons);
     }
   };
 

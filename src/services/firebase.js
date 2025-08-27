@@ -161,6 +161,23 @@ export const getDriverCarInfo = async (userId) => {
 };
 
 /**
+ * Atualiza as informações do carro do motorista
+ * Chamado quando o motorista edita as informações do carro
+ * @param {string} userId - ID único do usuário
+ * @param {Object} carInfo - Novas informações do carro (modelo, placa, cor)
+ */
+export const updateDriverCarInfo = async (userId, carInfo) => {
+  // Cria uma referência para o documento do carro (subcoleção)
+  const carRef = doc(db, 'users', userId, 'car', 'info');
+  
+  // Atualiza as informações do carro
+  await updateDoc(carRef, {
+    ...carInfo,
+    updatedAt: new Date() // Data da última atualização
+  });
+};
+
+/**
  * Atualiza o usuário para motorista
  * Chamado quando o usuário preenche as informações do carro
  * @param {string} userId - ID único do usuário

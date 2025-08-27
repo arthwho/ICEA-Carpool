@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import CustomNumberInput from '../components/CustomNumberInput';
+import CustomTimePicker from '../components/CustomTimePicker';
 import { addRide, getUserProfile, updateUserToDriver, setDriverCarInfo, getDriverCarInfo } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
@@ -15,6 +17,7 @@ import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
 import CarInfoModal from '../components/CarInfoModal';
+import { getFirebaseErrorMessage } from '../utils/firebaseErrorHandler';
 
 /**
  * Tela para oferecer caronas
@@ -30,7 +33,8 @@ const OfferRideScreen = ({ setScreen, user }) => {
   // Campos do formulário de carona
   const [origin, setOrigin] = useState('');
   const [departureTime, setDepartureTime] = useState('');
-  const [availableSeats, setAvailableSeats] = useState('');
+  const [availableSeats, setAvailableSeats] = useState(1);
+  const [price, setPrice] = useState('');
   
   // Estados de controle da interface
   const [loading, setLoading] = useState(false);
@@ -93,6 +97,24 @@ const OfferRideScreen = ({ setScreen, user }) => {
       return;
     }
 
+    // Validação específica para o número de vagas
+    if (typeof availableSeats !== 'number' || availableSeats < 1 || availableSeats > 8) {
+      showAlert('Erro', 'Por favor, insira um número válido de vagas (1-8).');
+      return;
+    }
+
+    // Validação específica para o preço
+    if (price === '') {
+      showAlert('Erro', 'Por favor, insira um preço para a carona (use 0 para caronas gratuitas).');
+      return;
+    }
+    
+    const priceValue = parseFloat(price.replace(',', '.'));
+    if (isNaN(priceValue) || priceValue < 0) {
+      showAlert('Erro', 'Por favor, insira um preço válido (use 0 para caronas gratuitas).');
+      return;
+    }
+
     // Se o usuário não é motorista, abre o modal para cadastrar informações do carro
     if (!userProfile?.isDriver) {
       setShowCarModal(true);
@@ -132,7 +154,10 @@ const OfferRideScreen = ({ setScreen, user }) => {
       await publishRide();
     } catch (error) {
       console.error('Error saving car info:', error);
-      showAlert('Erro', 'Não foi possível salvar as informações do veículo.');
+      const errorMessage = getFirebaseErrorMessage(error);
+      showAlert('Erro', errorMessage, [
+        { text: 'OK', style: 'default' }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -170,7 +195,8 @@ const OfferRideScreen = ({ setScreen, user }) => {
         origin: origin.trim(),         // Ponto de partida
         destination: 'ICEA - UFOP',    // Destino fixo
         departureTime: departureTime.trim(), // Horário de saída
-        availableSeats: parseInt(availableSeats, 10), // Número de vagas
+        availableSeats: availableSeats, // Número de vagas
+        price: parseFloat(price.replace(',', '.')), // Preço da carona
         passengers: [],                // Lista de passageiros (vazia inicialmente)
         status: 'available',           // Status da carona
         carInfo: currentCarInfo,       // Informações do carro incluídas na carona
@@ -180,7 +206,10 @@ const OfferRideScreen = ({ setScreen, user }) => {
       setScreen('Home'); // Navega para a tela principal
     } catch (err) {
       console.error('Error offering ride:', err);
-      showAlert('Erro', 'Não foi possível oferecer a carona. Tente novamente.');
+      const errorMessage = getFirebaseErrorMessage(err);
+      showAlert('Erro', errorMessage, [
+        { text: 'OK', style: 'default' }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -190,6 +219,31 @@ const OfferRideScreen = ({ setScreen, user }) => {
   // FUNÇÕES AUXILIARES
   // ========================================
   
+  /**
+   * Função para validar e formatar o preço da carona
+   * Aceita apenas números e vírgula para decimais
+   * @param {string} value - Valor digitado pelo usuário
+   */
+  const handlePriceChange = (value) => {
+    // Remove caracteres não permitidos (apenas números e vírgula)
+    const cleanValue = value.replace(/[^0-9,]/g, '');
+    
+    // Converte vírgula para ponto para validação
+    const normalizedValue = cleanValue.replace(',', '.');
+    
+    // Valida se é um número válido
+    const numValue = parseFloat(normalizedValue);
+    
+    if (cleanValue === '') {
+      setPrice('');
+    } else if (!isNaN(numValue) && numValue >= 0) {
+      // Se é um número válido e não negativo, aceita
+      setPrice(cleanValue);
+    }
+  };
+  
+
+
   /**
    * Fecha o modal de informações do carro
    */
@@ -237,30 +291,38 @@ const OfferRideScreen = ({ setScreen, user }) => {
           onChangeText={setOrigin}
         />
         
-        <TextInput
-          style={[styles.input, { 
-            backgroundColor: theme.surface.primary,
-            color: theme.text.primary,
-            borderColor: theme.border.primary
-          }]}
-          placeholder="Horário de Saída (Ex: 07:30)"
-          placeholderTextColor={theme.text.tertiary}
+        <CustomTimePicker
           value={departureTime}
-          onChangeText={setDepartureTime}
+          onChange={setDepartureTime}
+          label="Horário de Saída"
+          placeholder="Selecione o horário"
         />
         
-        <TextInput
-          style={[styles.input, { 
-            backgroundColor: theme.surface.primary,
-            color: theme.text.primary,
-            borderColor: theme.border.primary
-          }]}
-          placeholder="Vagas Disponíveis"
-          placeholderTextColor={theme.text.tertiary}
+        <CustomNumberInput
           value={availableSeats}
-          onChangeText={setAvailableSeats}
-          keyboardType="numeric"
+          onChange={setAvailableSeats}
+          min={1}
+          max={8}
+          step={1}
+          label="Número de vagas disponíveis"
         />
+        
+        <View style={[styles.priceInputContainer, { 
+          backgroundColor: theme.surface.primary,
+          borderColor: theme.border.primary
+        }]}>
+          <Text style={[styles.currencySymbol, { color: theme.text.primary }]}>R$</Text>
+          <TextInput
+            style={[styles.priceInput, { 
+              color: theme.text.primary,
+            }]}
+            placeholder="0,00"
+            placeholderTextColor={theme.text.tertiary}
+            value={price}
+            onChangeText={handlePriceChange}
+            keyboardType="numeric"
+          />
+        </View>
         
         {/* Botão para publicar carona */}
         <TouchableOpacity 
@@ -302,15 +364,16 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   input: {
-    width: '100%',
+    width: 350,
     padding: 15,
     borderRadius: 8,
     marginBottom: 15,
     fontSize: 16,
     borderWidth: 1,
+    height: 50,
   },
   button: {
-    width: '100%',
+    width: 350,
     padding: 15,
     borderRadius: 8,
     alignItems: 'center',
@@ -321,6 +384,29 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  priceInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 8,
+    marginBottom: 15,
+    width: 350,
+    height: 50,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+  },
+  priceInput: {
+    flex: 1,
+    padding: 15,
+    fontSize: 16,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+  },
+
 });
 
 export default OfferRideScreen;

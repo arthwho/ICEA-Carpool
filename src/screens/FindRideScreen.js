@@ -161,6 +161,14 @@ const FindRideScreen = ({ setScreen, user }) => {
                 <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
                   <Text style={[styles.bold, { color: theme.text.primary }]}>Vagas:</Text> {item.availableSeats}
                 </Text>
+                <Text style={[styles.rideDetail, { color: theme.text.tertiary }]}>
+                  <Text style={[styles.bold, { color: theme.text.primary }]}>Preço:</Text> 
+                  {!item.price || item.price === 0 ? (
+                    <Text style={[styles.freeRide, { color: theme.status.available }]}> Gratuito</Text>
+                  ) : (
+                    <Text style={[styles.priceText, { color: theme.text.primary }]}> R$ {Number(item.price).toFixed(2).replace('.', ',')}</Text>
+                  )}
+                </Text>
                 
                 {/* Display car information if available */}
                 {item.carInfo && (
@@ -239,6 +247,12 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   bold: {
+    fontWeight: 'bold',
+  },
+  freeRide: {
+    fontWeight: 'bold',
+  },
+  priceText: {
     fontWeight: 'bold',
   },
   carInfoSection: {

@@ -82,7 +82,7 @@ export const ResponsiveCard = ({ children, style }) => {
         { 
           backgroundColor: theme.surface.primary,
           ...(isWeb && {
-            boxShadow: `0 4px 6px ${theme.shadow.primary}1A`,
+            boxShadow: `0 4px 6px ${theme.shadow.primaryWithOpacity}`,
           })
         },
         style

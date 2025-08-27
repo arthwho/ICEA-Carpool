@@ -162,7 +162,6 @@ export default function App() {
     </ThemeProvider>
   );
 }
-
 // ========================================
 // ESTILOS DA APLICAÇÃO
 // ========================================
@@ -175,3 +174,4 @@ const styles = StyleSheet.create({
     flex: 1, // Ocupa o espaço restante (após header e navegação)
   },
 });
+

@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   ScrollView,
   Image,
@@ -13,6 +12,9 @@ import {
 import { signIn, signUp, setUserProfile, getUserProfile, signInWithGoogle, getRedirectUri } from '../services/firebase';
 import { useTheme } from '../hooks/useTheme';
 import { useResponsive } from '../hooks/useResponsive';
+import { useCustomAlert } from '../hooks/useCustomAlert';
+import CustomAlert from '../components/CustomAlert';
+import { getFirebaseErrorMessage, isValidationError, isNetworkError, testFirebaseErrorHandler } from '../utils/firebaseErrorHandler';
 
 /**
  * Tela de autenticação da aplicação
@@ -44,6 +46,16 @@ const AuthScreen = ({ onAuthSuccess }) => {
   
   const { theme } = useTheme();
   const { isWeb, isDesktop, getResponsiveStyle } = useResponsive();
+  const { showAlert, alertState, closeAlert } = useCustomAlert();
+  
+  // ========================================
+  // REFS PARA FOCUS DOS INPUTS
+  // ========================================
+  
+  const firstNameRef = React.useRef(null);
+  const lastNameRef = React.useRef(null);
+  const emailRef = React.useRef(null);
+  const passwordRef = React.useRef(null);
 
   // ========================================
   // FUNÇÃO PRINCIPAL DE AUTENTICAÇÃO
@@ -56,13 +68,17 @@ const AuthScreen = ({ onAuthSuccess }) => {
   const handleAuth = async () => {
     // Validação dos campos obrigatórios
     if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha email e senha.');
+      showAlert('Erro', 'Por favor, preencha email e senha.', [
+        { text: 'OK', style: 'default' }
+      ]);
       return;
     }
 
     // Validação adicional para registro (nome e sobrenome)
     if (!isLogin && (!firstName.trim() || !lastName.trim())) {
-      Alert.alert('Erro', 'Por favor, preencha nome e sobrenome.');
+      showAlert('Erro', 'Por favor, preencha nome e sobrenome.', [
+        { text: 'OK', style: 'default' }
+      ]);
       return;
     }
 
@@ -120,7 +136,26 @@ const AuthScreen = ({ onAuthSuccess }) => {
       }
     } catch (err) {
       console.error('Auth error:', err);
-      Alert.alert('Erro', err.message || 'Falha ao autenticar');
+      console.log('Error type:', typeof err);
+      console.log('Error code:', err.code);
+      console.log('Error message:', err.message);
+      
+      // Usa o handler de erro do Firebase para mensagens amigáveis
+      const errorMessage = getFirebaseErrorMessage(err);
+      console.log('Processed error message:', errorMessage);
+      
+      // Define o título baseado no tipo de erro
+      let errorTitle = 'Erro';
+      if (isValidationError(err)) {
+        errorTitle = 'Dados Inválidos';
+      } else if (isNetworkError(err)) {
+        errorTitle = 'Erro de Conexão';
+      }
+      
+      console.log('Showing alert with title:', errorTitle, 'message:', errorMessage);
+      showAlert(errorTitle, errorMessage, [
+        { text: 'OK', style: 'default' }
+      ]);
     } finally {
       setLoading(false);
     }
@@ -166,8 +201,25 @@ const AuthScreen = ({ onAuthSuccess }) => {
       onAuthSuccess(cred.user);
     } catch (err) {
       console.error('AuthScreen: Google sign-in error:', err);
+      console.log('Google error type:', typeof err);
+      console.log('Google error code:', err.code);
+      console.log('Google error message:', err.message);
+      
       if (err.message !== 'Google sign-in was cancelled') {
-        Alert.alert('Erro', `Falha no login com Google: ${err.message}`);
+        // Usa o handler de erro do Firebase para mensagens amigáveis
+        const errorMessage = getFirebaseErrorMessage(err);
+        console.log('Google processed error message:', errorMessage);
+        
+        // Define o título baseado no tipo de erro
+        let errorTitle = 'Erro no Google Sign-In';
+        if (isNetworkError(err)) {
+          errorTitle = 'Erro de Conexão';
+        }
+        
+        console.log('Showing Google alert with title:', errorTitle, 'message:', errorMessage);
+        showAlert(errorTitle, errorMessage, [
+          { text: 'OK', style: 'default' }
+        ]);
       }
     } finally {
       setLoading(false);
@@ -176,7 +228,13 @@ const AuthScreen = ({ onAuthSuccess }) => {
 
   const debugRedirectUri = () => {
     const uri = getRedirectUri();
-    Alert.alert('Redirect URI', `Copy this URI to Google Cloud Console:\n\n${uri}`);
+    showAlert('Redirect URI', `Copy this URI to Google Cloud Console:\n\n${uri}`, [
+      { text: 'OK', style: 'default' }
+    ]);
+  };
+
+  const testErrorHandler = () => {
+    testFirebaseErrorHandler(showAlert);
   };
 
   return (
@@ -213,6 +271,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
         {!isLogin && (
           <>
             <TextInput
+              ref={firstNameRef}
               style={[
                 styles.input, 
                 { 
@@ -230,9 +289,17 @@ const AuthScreen = ({ onAuthSuccess }) => {
               value={firstName}
               onChangeText={setFirstName}
               autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                // Focus next input (lastName)
+                if (lastNameRef.current) {
+                  lastNameRef.current.focus();
+                }
+              }}
             />
 
             <TextInput
+              ref={lastNameRef}
               style={[
                 styles.input, 
                 { 
@@ -250,11 +317,19 @@ const AuthScreen = ({ onAuthSuccess }) => {
               value={lastName}
               onChangeText={setLastName}
               autoCapitalize="words"
+              returnKeyType="next"
+              onSubmitEditing={() => {
+                // Focus next input (email)
+                if (emailRef.current) {
+                  emailRef.current.focus();
+                }
+              }}
             />
           </>
         )}
 
         <TextInput
+          ref={emailRef}
           style={[
             styles.input, 
             { 
@@ -273,9 +348,22 @@ const AuthScreen = ({ onAuthSuccess }) => {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          returnKeyType={isLogin ? "done" : "next"}
+          onSubmitEditing={() => {
+            if (isLogin) {
+              // In login mode, submit the form when Enter is pressed on email
+              handleAuth();
+            } else {
+              // In register mode, focus next input (password)
+              if (passwordRef.current) {
+                passwordRef.current.focus();
+              }
+            }
+          }}
         />
 
         <TextInput
+          ref={passwordRef}
           style={[
             styles.input, 
             { 
@@ -293,6 +381,8 @@ const AuthScreen = ({ onAuthSuccess }) => {
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          returnKeyType="done"
+          onSubmitEditing={handleAuth}
         />
 
         <TouchableOpacity
@@ -332,6 +422,13 @@ const AuthScreen = ({ onAuthSuccess }) => {
           </Text>
         </TouchableOpacity>
       </View>
+      <CustomAlert 
+        visible={alertState.visible} 
+        title={alertState.title} 
+        message={alertState.message} 
+        buttons={alertState.buttons}
+        onClose={closeAlert} 
+      />
     </ScrollView>
   );
 };

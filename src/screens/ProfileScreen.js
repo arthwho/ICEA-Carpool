@@ -7,18 +7,22 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
-import { signOut as firebaseSignOut, getUserProfile, getDriverCarInfo } from '../services/firebase';
+import { signOut as firebaseSignOut, getUserProfile, getDriverCarInfo, updateDriverCarInfo } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
+import { getFirebaseErrorMessage } from '../utils/firebaseErrorHandler';
 import ThemeToggle from '../components/ThemeToggle';
+import CarInfoModal from '../components/CarInfoModal';
 
 const ProfileScreen = ({ setScreen, user, onSignOut }) => {
   const [userProfile, setUserProfile] = useState(null);
   const [carInfo, setCarInfo] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showEditCarModal, setShowEditCarModal] = useState(false);
+  const [editCarLoading, setEditCarLoading] = useState(false);
   const { isMobile } = useResponsive();
   const { showAlert, alertState, closeAlert } = useCustomAlert();
   const { theme } = useTheme();
@@ -63,12 +67,43 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
               onSignOut();
             } catch (error) {
               console.error('Error signing out:', error);
-              showAlert('Erro', 'Não foi possível sair. Tente novamente.');
+              const errorMessage = getFirebaseErrorMessage(error);
+              showAlert('Erro', errorMessage, [
+                { text: 'OK', style: 'default' }
+              ]);
             }
           },
         },
       ]
     );
+  };
+
+  const handleEditCarInfo = () => {
+    setShowEditCarModal(true);
+  };
+
+  const handleSaveCarInfo = async (carData) => {
+    setEditCarLoading(true);
+    try {
+      await updateDriverCarInfo(user.uid, carData);
+      setCarInfo(carData);
+      setShowEditCarModal(false);
+      showAlert('Sucesso', 'Informações do veículo atualizadas com sucesso!', [
+        { text: 'OK', style: 'default' }
+      ]);
+    } catch (error) {
+      console.error('Error updating car info:', error);
+      const errorMessage = getFirebaseErrorMessage(error);
+      showAlert('Erro', errorMessage, [
+        { text: 'OK', style: 'default' }
+      ]);
+    } finally {
+      setEditCarLoading(false);
+    }
+  };
+
+  const handleCloseEditCarModal = () => {
+    setShowEditCarModal(false);
   };
 
   // Use MobileContainer for mobile, ResponsiveContainer for web
@@ -91,6 +126,15 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
         message={alertState.message}
         buttons={alertState.buttons}
         onClose={closeAlert}
+      />
+      
+      <CarInfoModal
+        visible={showEditCarModal}
+        onClose={handleCloseEditCarModal}
+        onSave={handleSaveCarInfo}
+        loading={editCarLoading}
+        initialValues={carInfo}
+        isEditing={true}
       />
       
       <ScrollView 
@@ -152,7 +196,15 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
               backgroundColor: theme.interactive.active + '1A',
               borderLeftColor: theme.interactive.active 
             }]}>
-              <Text style={[styles.carInfoTitle, { color: theme.interactive.active }]}>Informações do Veículo</Text>
+              <View style={styles.carInfoHeader}>
+                <Text style={[styles.carInfoTitle, { color: theme.interactive.active }]}>Informações do Veículo</Text>
+                <TouchableOpacity
+                  style={[styles.editButton, { backgroundColor: theme.interactive.button.primary }]}
+                  onPress={handleEditCarInfo}
+                >
+                  <Text style={[styles.editButtonText, { color: theme.text.inverse }]}>Editar</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.carInfoSection}>
                 <Text style={[styles.carInfoLabel, { color: theme.text.tertiary }]}>Modelo:</Text>
                 <Text style={[styles.carInfoValue, { color: theme.text.secondary }]}>{carInfo.model}</Text>
@@ -235,11 +287,24 @@ const styles = StyleSheet.create({
     marginTop: 15,
     borderLeftWidth: 4,
   },
+  carInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
   carInfoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
+  },
+  editButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  editButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   carInfoSection: {
     flexDirection: 'row',

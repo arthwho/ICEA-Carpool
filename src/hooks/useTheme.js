@@ -14,7 +14,7 @@ const ThemeContext = createContext();
 
 // Theme provider component
 export const ThemeProvider = ({ children }) => {
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
   const theme = getTheme(isDarkMode);
 
@@ -52,8 +52,8 @@ export const ThemeProvider = ({ children }) => {
         }
       } catch (error) {
         console.error('Error loading theme preference:', error);
-        // Fallback to dark mode if there's an error
-        setIsDarkMode(true);
+        // Fallback to light mode if there's an error
+        setIsDarkMode(false);
       } finally {
         setIsLoaded(true);
       }

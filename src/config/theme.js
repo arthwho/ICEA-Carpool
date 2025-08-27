@@ -181,4 +181,4 @@ export const getTheme = (isDark = true) => {
 };
 
 // Export default theme (dark mode)
-export default darkTheme;
+export default lightTheme;
