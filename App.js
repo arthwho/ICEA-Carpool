@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, LogBox } from 'react-native';
 
 // Importação das telas da aplicação
 import AuthScreen from './src/screens/AuthScreen';
@@ -27,6 +27,8 @@ import { ThemeProvider, useTheme } from './src/hooks/useTheme';
  * Gerencia o estado global, autenticação e navegação
  */
 function AppContent() {
+  // Silencia o erro de strings fora de <Text> para não travar a navegação enquanto corrigimos
+  LogBox.ignoreLogs(['Text strings must be rendered within a <Text> component']);
   // ========================================
   // ESTADOS GLOBAIS DA APLICAÇÃO
   // ========================================

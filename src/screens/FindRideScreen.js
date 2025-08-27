@@ -23,6 +23,7 @@ import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
 import RideCard from '../components/RideCard';
 import RideFilters from '../components/RideFilters';
+import BackgroundPattern from '../components/BackgroundPattern';
 import { useEntranceAnimation } from '../hooks/useAnimations';
 
 /**
@@ -310,14 +311,15 @@ const FindRideScreen = ({ setScreen, user }) => {
 
   return (
     <Container style={styles.container} user={user}>
-      {/* Alerta customizado para web */}
-      <CustomAlert
-        visible={alertState.visible}
-        title={alertState.title}
-        message={alertState.message}
-        buttons={alertState.buttons}
-        onClose={closeAlert}
-      />
+      <BackgroundPattern variant="primary">
+        {/* Alerta customizado para web */}
+        <CustomAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons}
+          onClose={closeAlert}
+        />
       
       {/* Container principal com padding responsivo */}
       <View style={styles.contentContainer}>
@@ -386,6 +388,7 @@ const FindRideScreen = ({ setScreen, user }) => {
           </TouchableOpacity>
         </Animated.View>
       </View>
+      </BackgroundPattern>
     </Container>
   );
 };
@@ -413,7 +416,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   emptyState: {
     flex: 1,

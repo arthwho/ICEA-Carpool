@@ -11,6 +11,7 @@ import { subscribeUserRideHistory } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer, ResponsiveGrid, ResponsiveCard } from '../components/ResponsiveLayout';
 import { useResponsive } from '../hooks/useResponsive';
 import { useTheme } from '../hooks/useTheme';
+import BackgroundPattern from '../components/BackgroundPattern';
 
 /**
  * Tela para visualizar o histórico de caronas do usuário
@@ -285,16 +286,16 @@ const RideHistoryScreen = ({ setScreen, user }) => {
         <Text style={[styles.priceLabel, { color: theme.text.tertiary }]}>
           {item.role === 'driver' ? 'Valor arrecadado:' : 'Valor pago:'}
         </Text>
-        <Text style={[styles.priceValue, { color: theme.text.primary }]}>
-          {!item.price || item.price === 0 ? (
-            <Text style={{ color: theme.status.available }}>Gratuito</Text>
-          ) : (
-            `R$ ${(item.role === 'driver' 
+        {!item.price || item.price === 0 ? (
+          <Text style={[styles.priceValue, { color: theme.status.available }]}>Gratuito</Text>
+        ) : (
+          <Text style={[styles.priceValue, { color: theme.text.primary }]}>
+            R$ {(item.role === 'driver' 
               ? item.price * (item.passengers?.length || 0)
               : item.price
-            ).toFixed(2).replace('.', ',')}`
-          )}
-        </Text>
+            ).toFixed(2).replace('.', ',')}
+          </Text>
+        )}
       </View>
     </ResponsiveCard>
   );
@@ -322,10 +323,11 @@ const RideHistoryScreen = ({ setScreen, user }) => {
 
   return (
     <Container style={styles.container} user={user}>
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <BackgroundPattern variant="default">
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Estatísticas */}
         {rideHistory.length > 0 && renderStats()}
 
@@ -360,6 +362,7 @@ const RideHistoryScreen = ({ setScreen, user }) => {
           </View>
         )}
       </ScrollView>
+      </BackgroundPattern>
     </Container>
   );
 };

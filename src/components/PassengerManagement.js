@@ -16,6 +16,7 @@ import {
 import { useTheme } from '../hooks/useTheme';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import CustomAlert from './CustomAlert';
+import BackgroundPattern from './BackgroundPattern';
 
 /**
  * Componente para gestão de passageiros pelo motorista
@@ -224,13 +225,14 @@ const PassengerManagement = ({ user }) => {
 
   return (
     <View style={styles.container}>
-      <CustomAlert
-        visible={alertState.visible}
-        title={alertState.title}
-        message={alertState.message}
-        buttons={alertState.buttons}
-        onClose={closeAlert}
-      />
+      <BackgroundPattern variant="secondary">
+        <CustomAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons}
+          onClose={closeAlert}
+        />
       
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {myRides.length === 0 ? (
@@ -314,6 +316,7 @@ const PassengerManagement = ({ user }) => {
           ))
         )}
       </ScrollView>
+      </BackgroundPattern>
     </View>
   );
 };

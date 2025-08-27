@@ -14,6 +14,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
+import BackgroundPattern from '../components/BackgroundPattern';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorHandler';
 import ThemeToggle from '../components/ThemeToggle';
 import CarInfoModal from '../components/CarInfoModal';
@@ -121,13 +122,14 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
 
   return (
     <Container style={styles.container} user={user}>
-      <CustomAlert
-        visible={alertState.visible}
-        title={alertState.title}
-        message={alertState.message}
-        buttons={alertState.buttons}
-        onClose={closeAlert}
-      />
+      <BackgroundPattern variant="secondary">
+        <CustomAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons}
+          onClose={closeAlert}
+        />
       
       <CarInfoModal
         visible={showEditCarModal}
@@ -305,6 +307,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
           <Text style={[styles.signOutButtonText, { color: theme.text.inverse }]}>Sair da Conta</Text>
         </TouchableOpacity>
       </ScrollView>
+      </BackgroundPattern>
     </Container>
   );
 };

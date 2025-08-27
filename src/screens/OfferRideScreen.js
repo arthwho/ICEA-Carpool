@@ -17,6 +17,7 @@ import { useResponsive } from '../hooks/useResponsive';
 import { useCustomAlert } from '../hooks/useCustomAlert';
 import { useTheme } from '../hooks/useTheme';
 import CustomAlert from '../components/CustomAlert';
+import BackgroundPattern from '../components/BackgroundPattern';
 import CarInfoModal from '../components/CarInfoModal';
 import { getFirebaseErrorMessage } from '../utils/firebaseErrorHandler';
 
@@ -261,14 +262,15 @@ const OfferRideScreen = ({ setScreen, user }) => {
 
   return (
     <Container style={styles.container} user={user}>
-      {/* Alerta customizado para web */}
-      <CustomAlert
-        visible={alertState.visible}
-        title={alertState.title}
-        message={alertState.message}
-        buttons={alertState.buttons}
-        onClose={closeAlert}
-      />
+      <BackgroundPattern variant="success">
+        {/* Alerta customizado para web */}
+        <CustomAlert
+          visible={alertState.visible}
+          title={alertState.title}
+          message={alertState.message}
+          buttons={alertState.buttons}
+          onClose={closeAlert}
+        />
       
       {/* Modal para cadastrar informações do carro */}
       <CarInfoModal
@@ -340,6 +342,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </BackgroundPattern>
     </Container>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Platform, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Platform, Dimensions } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
 const { width, height } = Dimensions.get('window');
@@ -18,6 +18,13 @@ const ResponsiveLayout = ({ children, mobileLayout, webLayout, style }) => {
   );
 };
 
+const renderChildSafely = (child) => {
+  if (typeof child === 'string' || typeof child === 'number') {
+    return <Text>{child}</Text>;
+  }
+  return child;
+};
+
 // Responsive Container Component
 export const ResponsiveContainer = ({ children, style, user }) => {
   const isWeb = Platform.OS === 'web';
@@ -31,7 +38,7 @@ export const ResponsiveContainer = ({ children, style, user }) => {
       { backgroundColor: theme.background.secondary },
       style
     ]}>
-      {children}
+      {React.Children.map(children, renderChildSafely)}
     </View>
   );
 };
@@ -61,7 +68,7 @@ export const ResponsiveGrid = ({ children, columns = 1, style }) => {
           styles.gridItem,
           !isWeb && styles.mobileGridItem,
         ]}>
-          {child}
+          {renderChildSafely(child)}
         </View>
       ))}
     </View>
@@ -87,7 +94,7 @@ export const ResponsiveCard = ({ children, style }) => {
         style
       ]}
     >
-      {children}
+      {React.Children.map(children, renderChildSafely)}
     </View>
   );
 };
@@ -98,12 +105,16 @@ export const MobileContainer = ({ children, style }) => {
   const { theme } = useTheme();
   
   if (isWeb) {
-    return <ResponsiveContainer style={style}>{children}</ResponsiveContainer>;
+    return (
+      <ResponsiveContainer style={style}>
+        {React.Children.map(children, renderChildSafely)}
+      </ResponsiveContainer>
+    );
   }
   
   return (
     <View style={[styles.container, styles.mobileContainer, { backgroundColor: theme.background.secondary }, style]}>
-      {children}
+      {React.Children.map(children, renderChildSafely)}
     </View>
   );
 };
