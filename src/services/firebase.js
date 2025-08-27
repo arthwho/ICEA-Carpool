@@ -1,12 +1,14 @@
 import { initializeApp } from 'firebase/app';
-import { 
-  getAuth, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
+import {
+  getAuth,
+  initializeAuth,
+  getReactNativePersistence,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   GoogleAuthProvider,
-  signInWithCredential
+  signInWithCredential,
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -21,8 +23,8 @@ import {
   query,
   where
 } from 'firebase/firestore';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ReactNativeAsyncStorage } from 'firebase/auth';
+import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import { firebaseConfig, googleConfig, adminConfig } from '../config/firebase-config';
 import * as AuthSession from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
@@ -36,12 +38,15 @@ import * as WebBrowser from 'expo-web-browser';
 const app = initializeApp(firebaseConfig);
 
 // Obtém as instâncias de autenticação e banco de dados
-const auth = getAuth(app);
+// Para React Native, é necessário inicializar o Auth com persistência baseada em AsyncStorage
+const auth = Platform.OS === 'web'
+  ? getAuth(app)
+  : initializeAuth(app, {
+      persistence: getReactNativePersistence(ReactNativeAsyncStorage),
+    });
 const db = getFirestore(app);
 
-// Configura a persistência da autenticação para usar AsyncStorage
-// Isso mantém o usuário logado mesmo após fechar o app
-auth.setPersistence(ReactNativeAsyncStorage);
+// Nota: no ambiente web, a persistência padrão do Firebase será utilizada.
 
 // ========================================
 // FUNÇÕES DE AUTENTICAÇÃO
@@ -352,5 +357,4 @@ export const getRedirectUri = () => {
 
 // Exporta as configurações de administrador
 export { adminConfig };
-
 
