@@ -319,7 +319,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
                 ))}
               </View>
               <TextInput
-                style={[styles.input, { backgroundColor: theme.surface.secondary, color: theme.text.primary, borderColor: theme.border.primary }]}
+                style={[styles.input, { backgroundColor: theme.surface.primary, color: theme.text.primary, borderColor: theme.border.primary }]}
                 placeholder="Ex.: Centro"
                 placeholderTextColor={theme.text.tertiary}
                 value={origin}
@@ -378,7 +378,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
                   </TouchableOpacity>
                 ))}
               </View>
-              <View style={[styles.priceInputContainer, { backgroundColor: theme.surface.secondary, borderColor: theme.border.primary }]}>
+              <View style={[styles.priceInputContainer, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}>
                 <Text style={[styles.currencySymbol, { color: theme.text.primary }]}>R$</Text>
                 <TextInput
                   style={[styles.priceInput, { color: theme.text.primary }]}

@@ -65,7 +65,7 @@ export const colors = {
 export const darkTheme = {
   // Background colors
   background: {
-    primary: colors.neutral.gray[800],    // #1a202c
+    primary: "#1b1c1d",    // #1a202c
     secondary: colors.neutral.gray[700],  // #2d3748
     tertiary: colors.neutral.gray[600],   // #4a5568
     modal: colors.neutral.gray[700],      // #2d3748
@@ -73,9 +73,9 @@ export const darkTheme = {
   
   // Surface colors
   surface: {
-    primary: colors.neutral.gray[700],    // #2d3748
+    primary: "#1b1c1d",    // #2d3748
     secondary: colors.neutral.gray[600],  // #4a5568
-    elevated: colors.neutral.gray[600],   // #4a5568
+    elevated: "#282a2c",   // #4a5568
   },
   
   // Text colors
@@ -130,9 +130,9 @@ export const lightTheme = {
   
   // Surface colors
   surface: {
-    primary: colors.neutral.gray[50],     // #f7fafc
+    primary: "#f0f4f9",     // #f7fafc
     secondary: colors.neutral.gray[100],  // #edf2f7
-    elevated: colors.neutral.white,       // #ffffff
+    elevated: "#dde3ea",       // #ffffff
   },
   
   // Text colors

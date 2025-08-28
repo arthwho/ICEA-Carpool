@@ -198,7 +198,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
           </View>
 
           {/* Ações rápidas */}
-          <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+          {/* <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
             <View style={styles.quickRow}>
               <TouchableOpacity style={[styles.pill, { borderColor: theme.border.primary }]} onPress={() => setScreen('OfferRide')}>
                 <Text style={[styles.pillText, { color: theme.text.primary }]}>Oferecer carona</Text>
@@ -210,7 +210,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
                 <Text style={[styles.pillText, { color: theme.text.primary }]}>Gerenciar</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </View> */}
 
           {/* Preferências */}
           <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 

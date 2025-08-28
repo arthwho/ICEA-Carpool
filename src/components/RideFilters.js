@@ -77,10 +77,10 @@ const RideFilters = ({
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface.elevated }]}>
+    <View style={[styles.container, { backgroundColor: theme.surface.primary }]}>
       {/* Header com busca e toggle de filtros */}
       <View style={styles.header}>
-        <View style={[styles.searchContainer, { backgroundColor: theme.surface.primary }]}>
+        <View style={[styles.searchContainer, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary, borderWidth: 1 }]}>
           <Text style={[styles.searchIcon, { color: theme.text.tertiary }]}>🔍</Text>
           <TextInput
             style={[styles.searchInput, { color: theme.text.primary }]}
@@ -114,7 +114,7 @@ const RideFilters = ({
               color: hasActiveFilters() ? theme.text.inverse : theme.text.primary
             }
           ]}>
-            {hasActiveFilters() ? `${getActiveFiltersCount()}` : '⚙️'}
+            {hasActiveFilters() ? `${getActiveFiltersCount()}` : '☰'}
           </Text>
         </TouchableOpacity>
       </View>

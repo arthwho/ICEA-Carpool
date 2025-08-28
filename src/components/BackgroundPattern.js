@@ -26,7 +26,7 @@ const BackgroundPattern = ({
   // Configurações de gradiente baseadas no tema e variante
   const getGradientConfig = () => {
     const baseColors = isDarkMode 
-      ? ['#1a202c', '#2d3748', '#4a5568'] 
+      ? ['#282a2c', '#2d3748', '#4a5568'] 
       : ['#ffffff', '#f7fafc', '#edf2f7'];
     
     const accentColors = isDarkMode
@@ -37,7 +37,7 @@ const BackgroundPattern = ({
       case 'primary':
         return {
           colors: isDarkMode 
-            ? ['#1a202c', '#2d3748', '#4299e1'] 
+            ? ['#282a2c', '#2d3748', '#4299e1'] 
             : ['#ffffff', '#f0f8ff', '#e6f3ff'],
           locations: [0, 0.7, 1],
           start: { x: 0, y: 0 },
@@ -46,25 +46,27 @@ const BackgroundPattern = ({
       case 'secondary':
         return {
           colors: isDarkMode 
-            ? ['#1a202c', '#2d3748', '#38b2ac'] 
-            : ['#ffffff', '#f0fffe', '#e6fffa'],
-          locations: [0, 0.6, 1],
-          start: { x: 1, y: 0 },
-          end: { x: 0, y: 1 }
+            ? ['#282a2c', '#282a2c', '#4299e1'] 
+            : ['#ffffff', '#f0f8ff', '#e6f3ff'],
+          locations: [0, 0.7, 1],
+          start: { x: 0, y: 0 },
+          end: { x: 1, y: 1 }
         };
       case 'success':
         return {
           colors: isDarkMode 
-            ? ['#1a202c', '#2d3748', '#48bb78'] 
-            : ['#ffffff', '#f0fff4', '#e6fffa'],
-          locations: [0, 0.8, 1],
-          start: { x: 0.5, y: 0 },
-          end: { x: 0.5, y: 1 }
+            ? ['#282a2c', '#282a2c', '#4299e1'] 
+            : ['#ffffff', '#f0f8ff', '#e6f3ff'],
+          locations: [0, 0.7, 1],
+          start: { x: 0, y: 0 },
+          end: { x: 1, y: 1 }
         };
       default:
         return {
-          colors: baseColors,
-          locations: [0, 0.5, 1],
+          colors: isDarkMode 
+            ? ['#282a2c', '#282a2c', '#4299e1'] 
+            : ['#ffffff', '#f0f8ff', '#e6f3ff'],
+          locations: [0, 0.7, 1],
           start: { x: 0, y: 0 },
           end: { x: 1, y: 1 }
         };

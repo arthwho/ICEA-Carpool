@@ -39,10 +39,14 @@ const RideCard = ({
       <View style={[
         styles.priceBadge, 
         { 
-          backgroundColor: isFree ? theme.status.available : theme.interactive.active,
+          backgroundColor: 'transparent',
+          borderColor: isFree ? theme.status.available : theme.interactive.active,
+          borderWidth: 1,
         }
       ]}>
-        <Text style={[styles.priceText, { color: theme.text.inverse }]}>
+        <Text style={[styles.priceText, { 
+          color: isFree ? theme.status.available : theme.interactive.active 
+        }]}>
           {isFree ? 'Gratuito' : `R$ ${Number(ride.price).toFixed(2).replace('.', ',')}`}
         </Text>
       </View>
@@ -60,11 +64,11 @@ const RideCard = ({
           {Array.from({ length: totalSeats }).map((_, index) => (
             <View
               key={index}
-              style={[
+                              style={[
                 styles.seatIcon,
                 {
                   backgroundColor: index < totalSeats - availableSeats 
-                    ? theme.status.available 
+                    ? theme.status.unavailable 
                     : theme.surface.secondary,
                   borderColor: theme.border.primary,
                 }
@@ -118,9 +122,9 @@ const RideCard = ({
           };
         default:
           return {
-            text: ride.availableSeats - (ride.passengers?.length || 0) > 0 ? '🚗 Solicitar' : '📋 Entrar na Fila',
+            text: ride.availableSeats - (ride.passengers?.length || 0) > 0 ? 'Solicitar' : '📋 Entrar na Fila',
             disabled: false,
-            color: theme.status.available
+            color: theme.interactive.active
           };
       }
     };
@@ -191,8 +195,8 @@ const RideCard = ({
         disabled: true
       },
       available: {
-        text: ride.availableSeats - (ride.passengers?.length || 0) > 0 ? '🚗 Solicitar' : '📋 Entrar na Fila',
-        style: [styles.actionButton, styles.requestButton, { backgroundColor: theme.status.available }],
+        text: ride.availableSeats - (ride.passengers?.length || 0) > 0 ? 'Solicitar' : '📋 Entrar na Fila',
+        style: [styles.actionButton, styles.requestButton, { backgroundColor: theme.interactive.active }],
         textStyle: { color: theme.text.inverse },
         disabled: false
       }
@@ -218,7 +222,7 @@ const RideCard = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface.elevated }]}>
+    <View style={[styles.container, { backgroundColor: theme.surface.primary }]}>
       {/* Header com rota e preço */}
       <View style={styles.header}>
         <View style={styles.routeContainer}>
@@ -256,7 +260,7 @@ const RideCard = ({
         {/* Informações do veículo (se disponível) */}
         {ride.carInfo && (
           <View style={styles.infoRow}>
-            <View style={[styles.infoIcon, { backgroundColor: theme.status.warning + '20' }]}>
+            <View style={[styles.infoIcon, { backgroundColor: theme.interactive.button.danger + '20', borderRadius: 8}]}>
               <Text style={styles.iconText}>🚗</Text>
             </View>
             <Text style={[styles.infoText, { color: theme.text.secondary }]}>

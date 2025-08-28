@@ -376,6 +376,7 @@ const FindRideScreen = ({ setScreen, user }) => {
         </ScrollView>
         
         {/* Floating Action Button para Oferecer Carona */}
+        {/*
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
           <TouchableOpacity
             style={[styles.fab, { backgroundColor: theme.interactive.active }]}
@@ -387,6 +388,7 @@ const FindRideScreen = ({ setScreen, user }) => {
             <Text style={[styles.fabText, { color: theme.text.inverse }]}>+</Text>
           </TouchableOpacity>
         </Animated.View>
+        */}
       </View>
       </BackgroundPattern>
     </Container>
