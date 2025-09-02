@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { 
   subscribeAvailableRides, 
+  subscribeAvailableRidesWithRatings,
   deleteRide as dbDeleteRide, 
   requestRide,
   getUserProfile,
@@ -78,11 +79,11 @@ const FindRideScreen = ({ setScreen, user }) => {
    * Não precisa recarregar manualmente - atualiza automaticamente
    */
   useEffect(() => {
-    // Configura o listener do Firestore
-    // subscribeAvailableRides retorna uma função para cancelar o listener
-    const unsubscribe = subscribeAvailableRides((fetchedRides) => {
+    // Configura o listener do Firestore com avaliações dos motoristas
+    // subscribeAvailableRidesWithRatings busca caronas disponíveis incluindo ratings
+    const unsubscribe = subscribeAvailableRidesWithRatings((fetchedRides) => {
       // Esta função é chamada sempre que os dados mudam no Firestore
-      setRides(fetchedRides); // Atualiza a lista de caronas
+      setRides(fetchedRides); // Atualiza a lista de caronas (agora com ratings)
       setLoading(false);      // Finaliza o carregamento
     });
 

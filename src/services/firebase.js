@@ -323,6 +323,41 @@ export const subscribeAvailableRides = (callback) => {
 };
 
 /**
+ * Configura um listener em tempo real para caronas disponíveis com avaliações dos motoristas
+ * @param {Function} callback - Função chamada quando os dados mudam
+ * @returns {Function} Função para cancelar o listener
+ */
+export const subscribeAvailableRidesWithRatings = (callback) => {
+  const ridesRef = collection(db, 'rides');
+  const q = query(ridesRef, where('status', '==', 'available'));
+  
+  return onSnapshot(q, async (snapshot) => {
+    const rides = [];
+    
+    // Processa cada documento e busca as avaliações do motorista
+    for (const docSnap of snapshot.docs) {
+      const rideData = { id: docSnap.id, ...docSnap.data() };
+      
+      // Busca as avaliações do motorista
+      if (rideData.driverId) {
+        try {
+          const driverProfile = await getUserProfile(rideData.driverId);
+          if (driverProfile && driverProfile.ratings) {
+            rideData.driverRating = driverProfile.ratings;
+          }
+        } catch (error) {
+          console.error('Error fetching driver ratings:', error);
+        }
+      }
+      
+      rides.push(rideData);
+    }
+    
+    callback(rides);
+  });
+};
+
+/**
  * Remove uma carona do Firestore
  * Usado apenas por administradores
  * @param {string} rideId - ID da carona a ser removida
@@ -618,6 +653,243 @@ export const subscribeUserReservations = (userId, callback) => {
 };
 
 // ========================================
+// FUNÇÕES DE AVALIAÇÃO
+// ========================================
+
+/**
+ * Cria solicitações de avaliação após completar carona
+ * @param {string} rideId - ID da carona
+ * @param {string} driverId - ID do motorista
+ * @param {string} driverName - Nome do motorista
+ * @param {Array} passengers - Lista de passageiros
+ */
+export const createRatingRequests = async (rideId, driverId, driverName, passengers, rideData) => {
+  const ratingsRef = collection(db, 'ratingRequests');
+  
+  // Para cada passageiro, cria 2 solicitações: driver->passenger e passenger->driver
+  for (const passenger of passengers) {
+    // Solicitação para motorista avaliar passageiro
+    await addDoc(ratingsRef, {
+      rideId,
+      fromUserId: driverId,
+      toUserId: passenger.passengerId,
+      fromUserName: driverName,
+      toUserName: passenger.passengerName,
+      fromUserRole: 'driver',
+      toUserRole: 'passenger',
+      rideInfo: {
+        origin: rideData.origin,
+        destination: rideData.destination,
+        departureTime: rideData.departureTime,
+        completedAt: rideData.completedAt
+      },
+      status: 'pending',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 dias
+    });
+    
+    // Solicitação para passageiro avaliar motorista  
+    await addDoc(ratingsRef, {
+      rideId,
+      fromUserId: passenger.passengerId,
+      toUserId: driverId,
+      fromUserName: passenger.passengerName,
+      toUserName: driverName,
+      fromUserRole: 'passenger',
+      toUserRole: 'driver',
+      rideInfo: {
+        origin: rideData.origin,
+        destination: rideData.destination,
+        departureTime: rideData.departureTime,
+        completedAt: rideData.completedAt
+      },
+      status: 'pending',
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    });
+  }
+};
+
+/**
+ * Submete uma avaliação
+ * @param {string} requestId - ID da solicitação de avaliação
+ * @param {Object} ratingData - Dados da avaliação
+ */
+export const submitRating = async (requestId, ratingData) => {
+  const ratingsRef = collection(db, 'ratings');
+  const requestRef = doc(db, 'ratingRequests', requestId);
+  
+  // Salva a avaliação
+  await addDoc(ratingsRef, {
+    ...ratingData,
+    createdAt: new Date()
+  });
+  
+  // Marca a solicitação como completa
+  await updateDoc(requestRef, {
+    status: 'completed',
+    completedAt: new Date()
+  });
+  
+  // Atualiza as estatísticas do usuário avaliado
+  await updateUserRatingStats(ratingData.toUserId, ratingData.toUserRole, ratingData);
+};
+
+/**
+ * Atualiza as estatísticas de avaliação do usuário
+ * @param {string} userId - ID do usuário avaliado
+ * @param {string} role - Role do usuário (driver ou passenger)
+ * @param {Object} ratingData - Dados da avaliação
+ */
+export const updateUserRatingStats = async (userId, role, ratingData) => {
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  const userData = userSnap.data();
+  
+  const roleKey = role === 'driver' ? 'asDriver' : 'asPassenger';
+  const currentRatings = userData.ratings?.[roleKey] || {
+    average: 0,
+    count: 0,
+    breakdown: role === 'driver' ? {
+      punctuality: 0,
+      communication: 0,
+      cleanliness: 0,
+      behavior: 0
+    } : {
+      punctuality: 0,
+      communication: 0,
+      behavior: 0
+    }
+  };
+  
+  const newCount = currentRatings.count + 1;
+  const categories = ratingData.categories || {};
+  
+  // Calcula novas médias (apenas para categorias que existem no role)
+  const newBreakdown = {};
+  Object.keys(currentRatings.breakdown).forEach(key => {
+    if (categories[key] !== undefined) {
+      newBreakdown[key] = Number(((Number(currentRatings.breakdown[key]) * currentRatings.count) + categories[key]) / newCount);
+    } else {
+      newBreakdown[key] = Number(currentRatings.breakdown[key]);
+    }
+  });
+  
+  const newAverage = ((currentRatings.average * currentRatings.count) + ratingData.rating) / newCount;
+  
+  // Atualiza o documento do usuário
+  await updateDoc(userRef, {
+    [`ratings.${roleKey}`]: {
+      average: Number(newAverage.toFixed(2)),
+      count: newCount,
+      breakdown: newBreakdown
+    },
+    updatedAt: new Date()
+  });
+};
+
+/**
+ * Busca solicitações de avaliação pendentes
+ * @param {string} userId - ID do usuário
+ * @returns {Promise<Array>} Lista de solicitações pendentes
+ */
+export const getPendingRatingRequests = async (userId) => {
+  const requestsRef = collection(db, 'ratingRequests');
+  const q = query(
+    requestsRef, 
+    where('fromUserId', '==', userId),
+    where('status', '==', 'pending')
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+};
+
+/**
+ * Listener em tempo real para solicitações de avaliação pendentes
+ * @param {string} userId - ID do usuário
+ * @param {Function} callback - Função de callback
+ * @returns {Function} Função para cancelar o listener
+ */
+export const subscribePendingRatingRequests = (userId, callback) => {
+  const requestsRef = collection(db, 'ratingRequests');
+  const q = query(
+    requestsRef,
+    where('fromUserId', '==', userId),
+    where('status', '==', 'pending')
+  );
+  
+  return onSnapshot(q, (snapshot) => {
+    const requests = [];
+    snapshot.forEach((doc) => {
+      requests.push({
+        id: doc.id,
+        ...doc.data()
+      });
+    });
+    callback(requests);
+  });
+};
+
+/**
+ * Busca avaliações recebidas por um usuário
+ * @param {string} userId - ID do usuário
+ * @param {string} role - Role (driver ou passenger)
+ * @returns {Promise<Array>} Lista de avaliações recebidas
+ */
+export const getUserReceivedRatings = async (userId, role) => {
+  const ratingsRef = collection(db, 'ratings');
+  const q = query(
+    ratingsRef,
+    where('toUserId', '==', userId),
+    where('toUserRole', '==', role)
+  );
+  
+  const snapshot = await getDocs(q);
+  const ratings = [];
+  
+  snapshot.forEach((doc) => {
+    ratings.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  return ratings.sort((a, b) => b.createdAt - a.createdAt);
+};
+
+/**
+ * Busca avaliações enviadas por um usuário
+ * @param {string} userId - ID do usuário
+ * @returns {Promise<Array>} Lista de avaliações enviadas
+ */
+export const getUserSentRatings = async (userId) => {
+  const ratingsRef = collection(db, 'ratings');
+  const q = query(
+    ratingsRef,
+    where('fromUserId', '==', userId)
+  );
+  
+  const snapshot = await getDocs(q);
+  const ratings = [];
+  
+  snapshot.forEach((doc) => {
+    ratings.push({
+      id: doc.id,
+      ...doc.data()
+    });
+  });
+  
+  return ratings.sort((a, b) => b.createdAt - a.createdAt);
+};
+
+/**
+ * Busca avaliações de um usuário (compatibilidade - usar getUserReceivedRatings)
+ * @deprecated Use getUserReceivedRatings instead
+ */
+export const getUserRatings = getUserReceivedRatings;
+
+// ========================================
 // FUNÇÕES DE HISTÓRICO DE CARONAS
 // ========================================
 
@@ -632,11 +904,13 @@ export const completeRide = async (rideId) => {
   const rideSnap = await getDoc(rideRef);
   const rideData = rideSnap.data();
   
+  const completedAt = new Date();
+  
   // Atualiza o status para completed
   await updateDoc(rideRef, {
     status: 'completed',
-    completedAt: new Date(),
-    updatedAt: new Date()
+    completedAt: completedAt,
+    updatedAt: completedAt
   });
   
   // Cria entradas no histórico para o motorista e passageiros
@@ -652,7 +926,7 @@ export const completeRide = async (rideId) => {
     departureTime: rideData.departureTime,
     passengers: rideData.passengers || [],
     price: rideData.price,
-    completedAt: new Date()
+    completedAt: completedAt
   });
   
   // Histórico dos passageiros
@@ -667,8 +941,19 @@ export const completeRide = async (rideId) => {
       departureTime: rideData.departureTime,
       driverName: rideData.driverName,
       price: rideData.price,
-      completedAt: new Date()
+      completedAt: completedAt
     });
+  }
+  
+  // Cria solicitações de avaliação
+  if (passengers.length > 0) {
+    await createRatingRequests(
+      rideId, 
+      rideData.driverId, 
+      rideData.driverName, 
+      passengers,
+      { ...rideData, completedAt }
+    );
   }
 };
 

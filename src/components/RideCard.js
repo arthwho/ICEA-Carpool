@@ -243,9 +243,21 @@ const RideCard = ({
           <View style={[styles.infoIcon, { backgroundColor: theme.interactive.active + '20' }]}>
             <Text style={styles.iconText}>👤</Text>
           </View>
-          <Text style={[styles.infoText, { color: theme.text.primary }]}>
-            {ride.driverName}
-          </Text>
+          <View style={styles.driverInfo}>
+            <Text style={[styles.infoText, { color: theme.text.primary }]}>
+              {ride.driverName}
+            </Text>
+            {ride.driverRating && ride.driverRating.asDriver && ride.driverRating.asDriver.count > 0 && (
+              <View style={styles.driverRatingContainer}>
+                <Text style={[styles.ratingStars, { color: theme.interactive.active }]}>
+                  ★
+                </Text>
+                <Text style={[styles.ratingText, { color: theme.text.secondary }]}>
+                  {ride.driverRating.asDriver.average.toFixed(1)} ({ride.driverRating.asDriver.count})
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <View style={styles.infoRow}>
@@ -365,6 +377,22 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 15,
+    fontWeight: '500',
+  },
+  driverInfo: {
+    flex: 1,
+  },
+  driverRatingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  ratingStars: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  ratingText: {
+    fontSize: 12,
     fontWeight: '500',
   },
   seatsContainer: {

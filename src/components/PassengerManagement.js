@@ -114,7 +114,13 @@ const PassengerManagement = ({ user }) => {
             setProcessingRequest(`${rideId}_complete`);
             try {
               await completeRide(rideId);
-              showAlert('Sucesso', 'Carona finalizada e movida para o histórico!');
+              showAlert(
+                'Carona Finalizada!', 
+                'A carona foi finalizada com sucesso. Você e os passageiros poderão se avaliar mutuamente no seu perfil.',
+                [
+                  { text: 'OK', style: 'default' }
+                ]
+              );
             } catch (error) {
               console.error('Error completing ride:', error);
               showAlert('Erro', 'Não foi possível finalizar a carona.');
