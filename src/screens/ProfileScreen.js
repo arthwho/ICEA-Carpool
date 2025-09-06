@@ -298,7 +298,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.page}>
           {/* Header minimalista */}
-          <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+          <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
             <View style={styles.headerRow}>
               <View style={[styles.avatar, { backgroundColor: theme.interactive.active }]}>
                 <Text style={[styles.avatarText, { color: theme.text.inverse }]}>
@@ -332,7 +332,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
           </View>
 
           {/* Veículo */}
-          <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+          <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
             <View style={styles.sectionHeaderRow}>
               <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Veículo</Text>
               <TouchableOpacity onPress={handleEditCarInfo} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
@@ -368,7 +368,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
 
           {/* Avaliações pendentes */}
           {pendingRatings.length > 0 && (
-            <View style={[styles.card, { backgroundColor: theme.surface.primary }]}>
+            <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
                   ⭐ Avaliações Pendentes
@@ -433,7 +433,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
           )}
 
           {/* Avaliações do usuário */}
-          <View style={[styles.card, { backgroundColor: theme.surface.primary }]}>
+          <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
                 Avaliações
@@ -600,7 +600,7 @@ const ProfileScreen = ({ setScreen, user, onSignOut }) => {
           </View>
 
           {/* Preferências */}
-          <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+          <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
             <View style={styles.settingRow}>
               <Text style={[styles.settingLabel, { color: theme.text.primary }]}>Tema escuro</Text>
               <Switch
@@ -647,6 +647,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     width: '100%',
+    borderWidth: 2,
   },
 
   // Header minimalista
@@ -749,7 +750,8 @@ const styles = StyleSheet.create({
   },
   pendingRatingCard: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 2,
     marginBottom: 12,
   },
   pendingRatingHeader: {
@@ -781,7 +783,8 @@ const styles = StyleSheet.create({
   rateNowButton: {
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 8,
+    borderRadius: 16,
+    borderWidth: 2,
     alignItems: 'center',
   },
   rateNowText: {
@@ -838,7 +841,8 @@ const styles = StyleSheet.create({
   },
   ratingItem: {
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 16,
+    borderWidth: 2,
     marginBottom: 8,
   },
   ratingHeader: {

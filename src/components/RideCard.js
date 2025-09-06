@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  theme,
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 
@@ -222,7 +223,7 @@ const RideCard = ({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface.primary }]}>
+    <View style={[styles.container, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}>
       {/* Header com rota e preço */}
       <View style={styles.header}>
         <View style={styles.routeContainer}>
@@ -318,10 +319,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    elevation: 0,
+    borderWidth: 2,
   },
   header: {
     flexDirection: 'row',

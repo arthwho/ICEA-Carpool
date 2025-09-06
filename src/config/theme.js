@@ -130,7 +130,7 @@ export const lightTheme = {
   
   // Surface colors
   surface: {
-    primary: "#f0f4f9",     // #f7fafc
+    primary: "#ffffff",     // #f7fafc
     secondary: colors.neutral.gray[100],  // #edf2f7
     elevated: "#dde3ea",       // #ffffff
   },

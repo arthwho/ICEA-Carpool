@@ -27,7 +27,7 @@ import {
 } from 'firebase/firestore';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
-import { firebaseConfig, googleConfig, adminConfig } from '../config/firebase-config';
+import { firebaseConfig, googleConfig, adminConfig, emailConfig } from '../config/firebase-config';
 
 // ========================================
 // SISTEMA DE ROLES E PERMISSÕES
@@ -116,6 +116,69 @@ const db = getFirestore(app);
 // Nota: no ambiente web, a persistência padrão do Firebase será utilizada.
 
 // ========================================
+// FUNÇÕES DE VALIDAÇÃO DE EMAIL
+// ========================================
+
+/**
+ * Valida se o email pertence ao domínio permitido
+ * @param {string} email - Email a ser validado
+ * @returns {boolean} Se o email é válido para o domínio permitido
+ */
+const isValidUFOPEmail = (email) => {
+  if (!email || typeof email !== 'string') {
+    return false;
+  }
+  
+  // Converte para lowercase para comparação case-insensitive
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  // Verifica se termina com o domínio permitido
+  return emailConfig.allowedDomains.some(domain => 
+    normalizedEmail.endsWith(`@${domain}`)
+  );
+};
+
+/**
+ * Valida formato de email e domínio UFOP
+ * @param {string} email - Email a ser validado
+ * @returns {Object} Resultado da validação
+ */
+const validateUFOPEmail = (email) => {
+  const result = {
+    isValid: false,
+    error: null
+  };
+  
+  if (!email) {
+    result.error = 'Email é obrigatório';
+    return result;
+  }
+  
+  if (typeof email !== 'string') {
+    result.error = 'Email deve ser uma string';
+    return result;
+  }
+  
+  const normalizedEmail = email.toLowerCase().trim();
+  
+  // Validação básica de formato de email
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(normalizedEmail)) {
+    result.error = 'Formato de email inválido';
+    return result;
+  }
+  
+  // Validação do domínio permitido
+  if (!isValidUFOPEmail(normalizedEmail)) {
+    result.error = `Apenas emails @${emailConfig.allowedDomain} são permitidos`;
+    return result;
+  }
+  
+  result.isValid = true;
+  return result;
+};
+
+// ========================================
 // FUNÇÕES DE AUTENTICAÇÃO
 // ========================================
 
@@ -146,6 +209,12 @@ export const signIn = async (email, password) => {
  * @returns {Promise} Resultado da criação da conta
  */
 export const signUp = async (email, password) => {
+  // Valida o email UFOP antes de tentar criar a conta
+  const emailValidation = validateUFOPEmail(email);
+  if (!emailValidation.isValid) {
+    throw new Error(emailValidation.error);
+  }
+  
   return createUserWithEmailAndPassword(auth, email, password);
 };
 
@@ -1295,7 +1364,19 @@ export const signInWithGoogle = async () => {
     const credential = GoogleAuthProvider.credential(tokenResponse.accessToken);
     
     // Faz login no Firebase com a credencial
-    return signInWithCredential(auth, credential);
+    const result = await signInWithCredential(auth, credential);
+    
+    // Valida se o email do Google é UFOP
+    if (result.user && result.user.email) {
+      const emailValidation = validateUFOPEmail(result.user.email);
+      if (!emailValidation.isValid) {
+        // Se não for email UFOP, faz logout imediatamente
+        await firebaseSignOut(auth);
+        throw new Error(emailValidation.error);
+      }
+    }
+    
+    return result;
   } else {
     // Se o usuário cancelou o login
     throw new Error('Google sign-in was cancelled');
@@ -1322,6 +1403,8 @@ export {
   getDefaultPermissions,
   hasPermission, 
   isAdmin, 
-  isModerator 
+  isModerator,
+  isValidUFOPEmail,
+  validateUFOPEmail
 };
 

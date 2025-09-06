@@ -292,7 +292,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={[styles.formContainer]}> 
             {/* Resumo do veículo */}
-            <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+            <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>Veículo</Text>
                 <TouchableOpacity onPress={() => setShowCarModal(true)}>
@@ -309,7 +309,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
             </View>
 
             {/* Origem */}
-            <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+            <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
               <Text style={[styles.label, { color: theme.text.primary }]}>Origem</Text>
               <View style={styles.chipsRow}>
                 {ORIGIN_PRESETS.map((item) => (
@@ -331,7 +331,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
             </View>
 
             {/* Horário */}
-            <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+            <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
               <Text style={[styles.label, { color: theme.text.primary }]}>Horário</Text>
               <View style={styles.chipsRow}>
                 {TIME_PRESETS.map((t) => (
@@ -351,7 +351,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
             </View>
 
             {/* Vagas */}
-            <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+            <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
               <CustomNumberInput
                 value={availableSeats}
                 onChange={setAvailableSeats}
@@ -366,7 +366,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
             </View>
 
             {/* Preço */}
-            <View style={[styles.card, { backgroundColor: theme.surface.primary }]}> 
+            <View style={[styles.card, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}> 
               <Text style={[styles.label, { color: theme.text.primary }]}>Preço</Text>
               <View style={styles.chipsRow}>
                 <TouchableOpacity style={[styles.chip, { borderColor: theme.border.primary }]} onPress={setFreePrice}>
@@ -415,7 +415,7 @@ const OfferRideScreen = ({ setScreen, user }) => {
 
         {/* CTA sticky (web) */}
         {!isMobile && (
-          <View style={[styles.stickyBar, { backgroundColor: theme.surface.elevated, borderTopColor: theme.border.primary }]}> 
+          <View style={[styles.stickyBar, { backgroundColor: theme.surface.primary, borderTopColor: theme.border.primary }]}> 
             <View style={styles.stickyContent}>
               <Text style={[styles.stickySummary, { color: theme.text.secondary }]}>
                 {origin || 'Origem'} • {departureTime || '--:--'} • {availableSeats} vagas • {price ? `R$ ${price}` : 'Preço'}
@@ -468,6 +468,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     width: '100%',
+    borderWidth: 2,
   },
   sectionHeader: {
     flexDirection: 'row',

@@ -77,7 +77,7 @@ const RideFilters = ({
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.surface.primary }]}>
+    <View style={[styles.container, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}>
       {/* Header com busca e toggle de filtros */}
       <View style={styles.header}>
         <View style={[styles.searchContainer, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary, borderWidth: 1 }]}>
@@ -122,7 +122,7 @@ const RideFilters = ({
       {/* Resultados count */}
       <View style={styles.resultsContainer}>
         <Text style={[styles.resultsText, { color: theme.text.secondary }]}>
-          {ridesCount} carona{ridesCount !== 1 ? 's' : ''} disponível{ridesCount !== 1 ? 'eis' : ''}
+          {ridesCount} carona{ridesCount !== 1 ? 's' : ''} {ridesCount !== 1 ? 'disponíveis' : 'disponível'}
         </Text>
         {hasActiveFilters() && (
           <TouchableOpacity style={styles.clearFilters} onPress={clearFilters}>
@@ -193,10 +193,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 2,
   },
   header: {
     flexDirection: 'row',

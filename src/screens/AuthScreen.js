@@ -250,8 +250,8 @@ const AuthScreen = ({ onAuthSuccess }) => {
           styles.mobileContent, // mobile styles
           {
             ...styles.webContent,
-            backgroundColor: theme.surface.elevated,
-            borderColor: theme.border.secondary,
+            backgroundColor: theme.surface.primary,
+            borderColor: theme.border.primary,
           }
         )
       ]}>
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 8,
-    borderWidth: 1,
+    borderWidth: 2,
   },
   logoContainer: {
     marginBottom: 20,

@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  Platform,
 } from 'react-native';
 import { subscribeUserRideHistory } from '../services/firebase';
 import { ResponsiveContainer, MobileContainer, ResponsiveGrid, ResponsiveCard } from '../components/ResponsiveLayout';
@@ -116,7 +117,8 @@ const RideHistoryScreen = ({ setScreen, user }) => {
         style={[
           styles.filterButton,
           {
-            backgroundColor: filter === 'all' ? theme.interactive.active : theme.surface.elevated,
+            backgroundColor: filter === 'all' ? theme.interactive.active : theme.surface.primary,
+            borderColor: filter === 'all' ? theme.interactive.active : theme.border.primary,
           }
         ]}
         onPress={() => setFilter('all')}
@@ -135,7 +137,8 @@ const RideHistoryScreen = ({ setScreen, user }) => {
         style={[
           styles.filterButton,
           {
-            backgroundColor: filter === 'driver' ? theme.interactive.active : theme.surface.elevated,
+            backgroundColor: filter === 'driver' ? theme.interactive.active : theme.surface.primary,
+            borderColor: filter === 'driver' ? theme.interactive.active : theme.border.primary,
           }
         ]}
         onPress={() => setFilter('driver')}
@@ -154,7 +157,8 @@ const RideHistoryScreen = ({ setScreen, user }) => {
         style={[
           styles.filterButton,
           {
-            backgroundColor: filter === 'passenger' ? theme.interactive.active : theme.surface.elevated,
+            backgroundColor: filter === 'passenger' ? theme.interactive.active : theme.surface.primary,
+            borderColor: filter === 'passenger' ? theme.interactive.active : theme.border.primary,
           }
         ]}
         onPress={() => setFilter('passenger')}
@@ -178,7 +182,7 @@ const RideHistoryScreen = ({ setScreen, user }) => {
     const stats = getStats();
     
     return (
-      <ResponsiveCard style={[styles.statsCard, { backgroundColor: theme.surface.elevated }]}>
+      <ResponsiveCard style={[styles.statsCard, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}>
         <Text style={[styles.statsTitle, { color: theme.text.primary }]}>
           Estatísticas Gerais
         </Text>
@@ -221,7 +225,7 @@ const RideHistoryScreen = ({ setScreen, user }) => {
   const renderHistoryItem = (item) => (
     <ResponsiveCard
       key={item.id}
-      style={[styles.historyCard, { backgroundColor: theme.surface.elevated }]}
+      style={[styles.historyCard, { backgroundColor: theme.surface.primary, borderColor: theme.border.primary }]}
     >
       <View style={styles.cardHeader}>
         <Text style={[styles.routeText, { color: theme.text.primary }]}>
@@ -386,13 +390,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 16,
+    padding: 20,
     paddingBottom: 80,
   },
   statsCard: {
     padding: 20,
     marginBottom: 20,
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 2,
   },
   statsTitle: {
     fontSize: 18,
@@ -424,7 +429,8 @@ const styles = StyleSheet.create({
   filterButton: {
     flex: 1,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 16,
+    borderWidth: 2,
     alignItems: 'center',
   },
   filterButtonText: {
@@ -434,8 +440,8 @@ const styles = StyleSheet.create({
   historyCard: {
     padding: 16,
     marginBottom: 12,
-    borderRadius: 12,
-    width: '100%',
+    borderRadius: 16,
+    borderWidth: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -520,7 +526,8 @@ const styles = StyleSheet.create({
   actionButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 16,
+    borderWidth: 2,
   },
   actionButtonText: {
     fontSize: 16,

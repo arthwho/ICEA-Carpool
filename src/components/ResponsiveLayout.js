@@ -152,8 +152,6 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   webCard: {
-    width: '100%',
-    height: '100%',
     transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
   },
 });
